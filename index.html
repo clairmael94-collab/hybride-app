@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hybride – Ma semaine type</title>
+  <style>
+    /* ---------- Couleurs (mode clair / sombre) ---------- */
+    :root {
+      --fond: #f4f5f7;
+      --carte: #ffffff;
+      --texte: #1c1f24;
+      --texte-doux: #5f6670;
+      --bordure: #e2e5ea;
+      --accent: #2563eb;
+      --course: #0f9d6b;
+      --course-fond: #e3f6ee;
+      --muscu: #d9661f;
+      --muscu-fond: #fcebdf;
+      --repos: #8a919b;
+      --repos-fond: #eef0f3;
+      --alerte: #b45309;
+      --alerte-fond: #fff4e0;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --fond: #121417;
+        --carte: #1c1f24;
+        --texte: #eceef1;
+        --texte-doux: #a2a9b3;
+        --bordure: #2d3138;
+        --accent: #6b9bff;
+        --course: #3ccf95;
+        --course-fond: #173329;
+        --muscu: #f39a5c;
+        --muscu-fond: #3a2618;
+        --repos: #8a919b;
+        --repos-fond: #25292f;
+        --alerte: #f5b453;
+        --alerte-fond: #3a2c14;
+      }
+    }
+
+    /* ---------- Mise en page générale ---------- */
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--fond);
+      color: var(--texte);
+      line-height: 1.45;
+    }
+    main { max-width: 640px; margin: 0 auto; padding: 20px 16px 48px; }
+    h1 { font-size: 1.6rem; margin: 0 0 4px; }
+    h2 { font-size: 1.15rem; margin: 0 0 12px; }
+    .sous-titre { color: var(--texte-doux); margin: 0 0 20px; }
+
+    .carte {
+      background: var(--carte);
+      border: 1px solid var(--bordure);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    /* ---------- Formulaire ---------- */
+    label { display: block; font-size: 0.9rem; color: var(--texte-doux); margin-bottom: 4px; }
+    input, select {
+      width: 100%;
+      font-size: 1rem;
+      padding: 10px 12px;
+      border: 1px solid var(--bordure);
+      border-radius: 10px;
+      background: var(--fond);
+      color: var(--texte);
+    }
+    .grille { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .grille .plein { grid-column: 1 / -1; }
+    .aide { font-size: 0.8rem; color: var(--texte-doux); margin: 4px 0 0; }
+
+    .jours { display: grid; gap: 8px; }
+    .jour-ligne { display: grid; grid-template-columns: 90px 1fr; align-items: center; gap: 8px; }
+    .jour-ligne span { font-weight: 600; }
+
+    button {
+      width: 100%;
+      font-size: 1.05rem;
+      font-weight: 600;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+    }
+    .erreur { color: #dc2626; font-weight: 600; margin: 10px 0 0; }
+
+    /* ---------- Résumé ---------- */
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat { background: var(--fond); border-radius: 10px; padding: 10px 12px; }
+    .stat small { display: block; color: var(--texte-doux); font-size: 0.8rem; }
+    .stat strong { font-size: 1.15rem; }
+    .message { margin: 12px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--fond); }
+    .message.alerte { background: var(--alerte-fond); color: var(--alerte); }
+
+    /* ---------- Semaine ---------- */
+    .seance {
+      background: var(--carte);
+      border: 1px solid var(--bordure);
+      border-left: 6px solid var(--repos);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+    .seance.course { border-left-color: var(--course); }
+    .seance.muscu  { border-left-color: var(--muscu); }
+    .seance-tete { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .seance-jour { font-weight: 700; }
+    .badge { font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+    .course .badge { background: var(--course-fond); color: var(--course); }
+    .muscu .badge  { background: var(--muscu-fond);  color: var(--muscu); }
+    .repos .badge  { background: var(--repos-fond);  color: var(--repos); }
+    .seance-titre { font-size: 1.05rem; font-weight: 600; margin: 6px 0 4px; }
+    .seance ul { margin: 4px 0 0; padding-left: 18px; }
+    .seance li { margin-bottom: 2px; }
+    .allure {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      background: var(--course-fond);
+      color: var(--course);
+      font-weight: 700;
+    }
+    .note { font-size: 0.8rem; color: var(--texte-doux); }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Ma semaine hybride</h1>
+  <p class="sous-titre">Course à pied + muscu, organisées pour ne pas se gêner.</p>
+
+  <!-- ========== FORMULAIRE ========== -->
+  <form id="formulaire" class="carte">
+    <h2>Mon objectif</h2>
+    <div class="grille">
+      <div>
+        <label for="objDistance">Distance</label>
+        <select id="objDistance">
+          <option value="5">5 km</option>
+          <option value="10">10 km</option>
+          <option value="21.0975" selected>Semi</option>
+          <option value="42.195">Marathon</option>
+        </select>
+      </div>
+      <div>
+        <label for="objTemps">Chrono visé</label>
+        <input id="objTemps" value="1:40:00" placeholder="h:mm:ss">
+      </div>
+      <div class="plein">
+        <label for="objDate">Date de la course</label>
+        <input id="objDate" type="date" value="2027-04-01">
+      </div>
+    </div>
+
+    <h2>Mes chronos récents</h2>
+    <div class="grille">
+      <div>
+        <label for="chrono1Dist">Distance</label>
+        <select id="chrono1Dist">
+          <option value="5">5 km</option>
+          <option value="10" selected>10 km</option>
+          <option value="21.0975">Semi</option>
+        </select>
+      </div>
+      <div>
+        <label for="chrono1Temps">Temps</label>
+        <input id="chrono1Temps" value="45:00" placeholder="mm:ss">
+      </div>
+      <div>
+        <label for="chrono2Dist">Distance</label>
+        <select id="chrono2Dist">
+          <option value="5" selected>5 km</option>
+          <option value="10">10 km</option>
+          <option value="21.0975">Semi</option>
+        </select>
+      </div>
+      <div>
+        <label for="chrono2Temps">Temps</label>
+        <input id="chrono2Temps" value="21:00" placeholder="mm:ss">
+      </div>
+    </div>
+    <p class="aide">Format : 21:00 pour 21 minutes, 1:40:00 pour 1 h 40. Laisse vide si tu n'as pas de chrono.</p>
+
+    <h2 style="margin-top:20px">Mon allure zone 2</h2>
+    <div class="grille">
+      <div class="plein">
+        <label for="allureZ2">Allure footing (min/km)</label>
+        <input id="allureZ2" value="6:30" placeholder="m:ss">
+      </div>
+    </div>
+    <p class="aide">L'allure où tu restes en zone 2 (endurance facile). Laisse vide pour une estimation à partir de tes chronos.</p>
+
+    <h2 style="margin-top:20px">Mes jours disponibles</h2>
+    <div class="jours" id="jours"></div>
+
+    <p class="erreur" id="erreur" hidden></p>
+    <button type="submit" style="margin-top:20px">Générer ma semaine</button>
+  </form>
+
+  <!-- ========== RÉSULTATS ========== -->
+  <section id="resultats"></section>
+
+  <p class="note">
+    Ces repères sont des estimations générales, pas un avis médical.
+    Écoute ton corps, et en cas de douleur ou de doute, consulte un professionnel de santé.
+  </p>
+</main>
+
+<script>
+  /* ---------- Données de départ ---------- */
+  const JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+  // Ce que tu fais chaque jour par défaut (dans l'ordre de JOURS)
+  const PLANNING_DEFAUT = ["muscu", "course", "muscu", "course", "repos", "muscu", "course"];
+
+  // Crée les 7 menus déroulants (un par jour)
+  const conteneurJours = document.getElementById("jours");
+  JOURS.forEach((nom, i) => {
+    const ligne = document.createElement("div");
+    ligne.className = "jour-ligne";
+    ligne.innerHTML = `
+      <span>${nom}</span>
+      <select id="jour${i}">
+        <option value="repos">Repos</option>
+        <option value="course">Course</option>
+        <option value="muscu">Muscu</option>
+      </select>`;
+    conteneurJours.appendChild(ligne);
+    document.getElementById("jour" + i).value = PLANNING_DEFAUT[i];
+  });
+
+  /* ---------- Petits outils de calcul ---------- */
+
+  // "1:40:00" ou "45:00" -> nombre de secondes (null si le format est faux)
+  function lireTemps(texte) {
+    texte = texte.trim();
+    if (texte === "") return null;
+    const morceaux = texte.split(":").map(Number);
+    if (morceaux.some(isNaN) || morceaux.length < 2 || morceaux.length > 3) return null;
+    if (morceaux.length === 2) return morceaux[0] * 60 + morceaux[1];
+    return morceaux[0] * 3600 + morceaux[1] * 60 + morceaux[2];
+  }
+
+  // secondes -> "4:44" (pour une allure au km)
+  function formatAllure(secondes) {
+    const s = Math.round(secondes);
+    return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+  }
+
+  // secondes -> "1 h 38" ou "44 min"
+  function formatDuree(secondes) {
+    const min = Math.round(secondes / 60);
+    if (min < 60) return min + " min";
+    return Math.floor(min / 60) + " h " + String(min % 60).padStart(2, "0");
+  }
+
+  // Formule de Riegel : prédit un temps sur une autre distance à partir d'un chrono connu
+  function predireTemps(tempsConnu, distConnue, distVoulue) {
+    return tempsConnu * Math.pow(distVoulue / distConnue, 1.06);
+  }
+
+  // Écart entre deux jours de la semaine, en tenant compte que dimanche est suivi de lundi
+  function ecartJours(a, b) {
+    const d = Math.abs(a - b);
+    return Math.min(d, 7 - d);
+  }
+
+  /* ---------- Placement des séances ---------- */
+  function construireSemaine(planning) {
+    const joursCourse = [];
+    const joursMuscu = [];
+    planning.forEach((type, i) => {
+      if (type === "course") joursCourse.push(i);
+      if (type === "muscu") joursMuscu.push(i);
+    });
+
+    const semaine = planning.map(type => ({ type, seance: null }));
+    const avertissements = [];
+
+    // 1) Sortie longue : de préférence le dimanche, sinon le samedi, sinon le dernier jour de course
+    let jourLongue = null;
+    if (joursCourse.includes(6)) jourLongue = 6;
+    else if (joursCourse.includes(5)) jourLongue = 5;
+    else if (joursCourse.length > 0) jourLongue = joursCourse[joursCourse.length - 1];
+    if (jourLongue !== null) semaine[jourLongue].seance = "longue";
+
+    // 2) Fractionné : le jour de course le plus éloigné de la sortie longue (pour bien récupérer)
+    const autresCourses = joursCourse.filter(j => j !== jourLongue);
+    let jourFractionne = null;
+    autresCourses.forEach(j => {
+      if (jourFractionne === null || ecartJours(j, jourLongue) > ecartJours(jourFractionne, jourLongue)) {
+        jourFractionne = j;
+      }
+    });
+    if (jourFractionne !== null) semaine[jourFractionne].seance = "fractionne";
+
+    // 3) Les autres jours de course = footing tranquille
+    autresCourses.forEach(j => { if (j !== jourFractionne) semaine[j].seance = "footing"; });
+
+    // Jours "durs" : il ne faut pas avoir les jambes lourdes la veille
+    const joursDurs = [jourLongue, jourFractionne].filter(j => j !== null);
+    const veilleDeJourDur = j => joursDurs.includes((j + 1) % 7);
+
+    // 4) Muscu : on place d'abord la séance jambes, là où elle gêne le moins
+    let restantsMuscu = [...joursMuscu];
+    if (joursMuscu.length === 1) {
+      semaine[joursMuscu[0]].seance = veilleDeJourDur(joursMuscu[0]) ? "haut" : "complet";
+    } else if (joursMuscu.length >= 2) {
+      // Note de "gêne" : 10 si c'est la veille d'une séance dure, 1 si c'est la veille d'un footing, 0 sinon
+      const gene = j => {
+        if (veilleDeJourDur(j)) return 10;
+        if (semaine[(j + 1) % 7].type === "course") return 1;
+        return 0;
+      };
+      const jourJambes = restantsMuscu.reduce((meilleur, j) => (gene(j) < gene(meilleur) ? j : meilleur));
+      semaine[jourJambes].seance = "jambes";
+      restantsMuscu = restantsMuscu.filter(j => j !== jourJambes);
+      if (gene(jourJambes) >= 10) {
+        avertissements.push(
+          "Impossible de placer la séance jambes sans qu'elle tombe la veille d'une séance de course difficile. " +
+          "Essaie de déplacer un jour de muscu ou de course."
+        );
+      }
+
+      // Puis haut du corps, puis gainage/mobilité (légers pour les jambes)
+      semaine[restantsMuscu.shift()].seance = "haut";
+      restantsMuscu.forEach(j => { semaine[j].seance = "gainage"; });
+    }
+
+    // Petits contrôles de bon sens
+    if (joursCourse.length < 3) {
+      avertissements.push("Avec moins de 3 courses par semaine, la préparation sera plus limitée.");
+    }
+    if (jourLongue !== null && jourFractionne !== null && ecartJours(jourLongue, jourFractionne) < 2) {
+      avertissements.push("Ton fractionné et ta sortie longue sont collés : garde au moins un jour entre les deux si possible.");
+    }
+
+    return { semaine, avertissements };
+  }
+
+  /* ---------- Contenu détaillé de chaque séance ---------- */
+  function detailSeance(seance, allures, distanceObjectif) {
+    const footing = `${formatAllure(allures.footingMin)} – ${formatAllure(allures.footingMax)} /km`;
+    switch (seance) {
+      case "footing":
+        return {
+          titre: "Footing tranquille · 40 min",
+          lignes: ["Allure facile : tu dois pouvoir parler en courant.", "Option : 4 lignes droites de 80 m à la fin."],
+          allure: footing,
+        };
+      case "fractionne":
+        return {
+          titre: "Fractionné · 6 × 800 m",
+          lignes: [
+            `15 min d'échauffement en footing (${footing}).`,
+            `6 × 800 m à allure 5 km : <strong>${formatAllure(allures.vma5k)} /km</strong>.`,
+            "Récupération : 2 min en trottinant entre chaque.",
+            "10 min de retour au calme en footing.",
+          ],
+          allure: formatAllure(allures.vma5k) + " /km",
+        };
+      case "longue": {
+        const lignes = [`Allure facile (${footing}) presque tout le long.`];
+        if (distanceObjectif >= 10) {
+          lignes.push(`Les 10 dernières minutes à allure objectif : <strong>${formatAllure(allures.objectif)} /km</strong>.`);
+        }
+        lignes.push("Augmente la durée de 10 % maximum d'une semaine à l'autre.");
+        return { titre: "Sortie longue · 1 h 10", lignes, allure: footing };
+      }
+      case "jambes":
+        return {
+          titre: "Muscu jambes · 45 min",
+          lignes: ["Squat 4 × 6", "Soulevé de terre jambes tendues 3 × 8", "Fentes 3 × 10 par jambe", "Mollets 3 × 15"],
+        };
+      case "haut":
+        return {
+          titre: "Muscu haut du corps · 45 min",
+          lignes: ["Développé couché ou pompes 4 × 8", "Tractions ou rowing 4 × 8", "Développé militaire 3 × 10", "Gainage 3 × 40 s"],
+        };
+      case "gainage":
+        return {
+          titre: "Gainage & mobilité · 30 min",
+          lignes: ["Planche 3 × 45 s", "Gainage latéral 3 × 30 s par côté", "Pont fessier 3 × 12", "Mobilité hanches et chevilles 10 min"],
+        };
+      case "complet":
+        return {
+          titre: "Muscu complète · 45 min",
+          lignes: ["Squat 3 × 6", "Développé couché ou pompes 3 × 8", "Rowing 3 × 8", "Gainage 3 × 40 s"],
+        };
+      default:
+        return { titre: "Repos", lignes: ["Récupération : marche, étirements légers, sommeil."] };
+    }
+  }
+
+  /* ---------- Quand on clique sur "Générer ma semaine" ---------- */
+  function generer() {
+    const erreur = document.getElementById("erreur");
+    erreur.hidden = true;
+
+    // Lecture de l'objectif
+    const distanceObjectif = Number(document.getElementById("objDistance").value);
+    const tempsObjectif = lireTemps(document.getElementById("objTemps").value);
+    const dateCourse = document.getElementById("objDate").value;
+
+    // Lecture des chronos récents (on garde ceux qui sont remplis)
+    const chronos = [1, 2]
+      .map(n => ({
+        distance: Number(document.getElementById(`chrono${n}Dist`).value),
+        temps: lireTemps(document.getElementById(`chrono${n}Temps`).value),
+      }))
+      .filter(c => c.temps);
+
+    if (!tempsObjectif) return afficherErreur("Le chrono visé n'est pas au bon format (exemple : 1:40:00).");
+    if (chronos.length === 0) return afficherErreur("Entre au moins un chrono récent (exemple : 45:00).");
+
+    // Niveau actuel : on convertit chaque chrono en "équivalent 10 km", puis on fait la moyenne
+    const equivalent10k = chronos.reduce((s, c) => s + predireTemps(c.temps, c.distance, 10), 0) / chronos.length;
+    const allure10k = equivalent10k / 10;
+
+    // Allure footing : ta zone 2 si tu l'as donnée (± 10 s), sinon une estimation prudente
+    // (environ 35 à 45 % plus lent que ton allure 10 km)
+    const texteZ2 = document.getElementById("allureZ2").value;
+    const allureZ2 = lireTemps(texteZ2);
+    if (texteZ2.trim() !== "" && !allureZ2) return afficherErreur("L'allure zone 2 n'est pas au bon format (exemple : 6:30).");
+
+    const allures = {
+      objectif: tempsObjectif / distanceObjectif,               // allure de course visée
+      footingMin: allureZ2 ? allureZ2 - 10 : allure10k * 1.35,  // borne rapide du footing
+      footingMax: allureZ2 ? allureZ2 + 10 : allure10k * 1.45,  // borne lente du footing
+      vma5k: predireTemps(equivalent10k, 10, 5) / 5,             // allure 5 km actuelle
+    };
+
+    // Temps estimé aujourd'hui sur la distance objectif
+    const estimation = predireTemps(equivalent10k, 10, distanceObjectif);
+
+    // Semaines restantes avant la course
+    let semainesRestantes = null;
+    if (dateCourse) {
+      const jours = (new Date(dateCourse + "T00:00:00") - new Date()) / 86400000;
+      semainesRestantes = Math.max(0, Math.ceil(jours / 7));
+    }
+
+    const planning = JOURS.map((_, i) => document.getElementById("jour" + i).value);
+    const { semaine, avertissements } = construireSemaine(planning);
+
+    // Message sur l'objectif (sans promesse)
+    let message;
+    const ratio = tempsObjectif / estimation;
+    if (ratio >= 1) {
+      message = `D'après tes chronos, ton niveau actuel est déjà proche de cet objectif (estimation : ${formatDuree(estimation)}). Reste régulier.`;
+    } else if (ratio >= 0.95) {
+      message = `Objectif un peu plus rapide que ton niveau estimé (${formatDuree(estimation)}) : il faudra progresser, régulièrement et sans brûler les étapes.`;
+    } else {
+      message = `Objectif nettement plus rapide que ton niveau estimé (${formatDuree(estimation)}). Il serait prudent de viser un chrono intermédiaire.`;
+    }
+
+    afficherResultats({ allures, estimation, semainesRestantes, semaine, avertissements, message, distanceObjectif });
+  }
+
+  function afficherErreur(texte) {
+    const erreur = document.getElementById("erreur");
+    erreur.textContent = texte;
+    erreur.hidden = false;
+  }
+
+  /* ---------- Affichage ---------- */
+  function afficherResultats(r) {
+    const nomsType = { course: "Course", muscu: "Muscu", repos: "Repos" };
+
+    let html = `
+      <div class="carte">
+        <h2>Mes repères</h2>
+        <div class="stats">
+          <div class="stat"><small>Allure objectif</small><strong>${formatAllure(r.allures.objectif)} /km</strong></div>
+          <div class="stat"><small>Niveau estimé</small><strong>${formatDuree(r.estimation)}</strong></div>
+          <div class="stat"><small>Allure footing</small><strong>${formatAllure(r.allures.footingMin)}–${formatAllure(r.allures.footingMax)}</strong></div>
+          <div class="stat"><small>Course dans</small><strong>${r.semainesRestantes !== null ? r.semainesRestantes + " sem." : "—"}</strong></div>
+        </div>
+        <p class="message">${r.message}</p>
+        ${r.avertissements.map(a => `<p class="message alerte">⚠️ ${a}</p>`).join("")}
+      </div>
+      <h2>Ma semaine type</h2>`;
+
+    r.semaine.forEach((jour, i) => {
+      const d = detailSeance(jour.seance, r.allures, r.distanceObjectif);
+      html += `
+        <div class="seance ${jour.type}">
+          <div class="seance-tete">
+            <span class="seance-jour">${JOURS[i]}</span>
+            <span class="badge">${nomsType[jour.type]}</span>
+          </div>
+          <div class="seance-titre">${d.titre}</div>
+          <ul>${d.lignes.map(l => `<li>${l}</li>`).join("")}</ul>
+          ${d.allure ? `<span class="allure">🎯 ${d.allure}</span>` : ""}
+        </div>`;
+    });
+
+    const zone = document.getElementById("resultats");
+    zone.innerHTML = html;
+  }
+
+  document.getElementById("formulaire").addEventListener("submit", e => {
+    e.preventDefault();
+    generer();
+    document.getElementById("resultats").scrollIntoView({ behavior: "smooth" });
+  });
+
+  // On génère une première fois au chargement, avec tes données
+  generer();
+</script>
+</body>
+</html>
