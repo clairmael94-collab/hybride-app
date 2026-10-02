@@ -133,6 +133,17 @@
       font-weight: 700;
     }
     .note { font-size: 0.8rem; color: var(--texte-doux); }
+
+    /* ---------- Navigation entre les semaines ---------- */
+    .nav-semaine {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      background: var(--carte); border: 1px solid var(--bordure); border-radius: 14px;
+      padding: 10px; text-align: center;
+    }
+    .nav-semaine small { display: block; color: var(--texte-doux); font-size: 0.8rem; }
+    .fleche { width: 48px; height: 48px; padding: 0; font-size: 1.1rem; flex-shrink: 0; }
+    .fleche:disabled { opacity: 0.3; cursor: default; }
+    .message.phase { margin: 10px 0 14px; }
   </style>
 </head>
 <body>
@@ -348,34 +359,150 @@
     return { semaine, avertissements };
   }
 
+  /* ---------- Plan semaine par semaine ---------- */
+
+  // Lundi de la semaine qui contient la date donnée
+  function lundiDe(date) {
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return d;
+  }
+
+  // Durée maximale de la sortie longue selon la course visée (en minutes)
+  const PLAFOND_LONGUE = { 5: 60, 10: 75, 21.0975: 105, 42.195: 150 };
+
+  // Décrit la semaine n° "numero" sur "total" : phase, type de fractionné, durée de sortie longue
+  function planDeLaSemaine(numero, total, distanceObjectif) {
+    const avantCourse = total - numero; // 0 = semaine de la course
+    let phase;
+    if (avantCourse === 0) phase = "course";
+    else if (avantCourse === 1) phase = "affutage";
+    else if (numero % 4 === 0) phase = "recup";          // 1 semaine allégée toutes les 4
+    else if (avantCourse <= 8) phase = "specifique";     // les 8 dernières semaines
+    else phase = "fondation";
+
+    // Sortie longue : on part de 70 min et on ajoute 5 min par semaine normale (moins de +10 %).
+    // Les semaines allégées ne font pas progresser : on repart ensuite du niveau d'avant.
+    const plafond = PLAFOND_LONGUE[distanceObjectif];
+    let niveau = Math.min(70, plafond);
+    for (let s = 2; s <= numero; s++) {
+      if (s % 4 !== 0) niveau = Math.min(plafond, niveau + 5);
+    }
+    let dureeLongue = niveau;
+    if (phase === "recup") dureeLongue = niveau * 0.8;
+    if (phase === "affutage") dureeLongue = niveau * 0.7;
+    if (phase === "course") dureeLongue = 40;
+    dureeLongue = Math.round(dureeLongue / 5) * 5;
+
+    // Fractionné : on tourne entre plusieurs séances pour varier
+    const semainesNormales = numero - Math.floor(numero / 4); // compte les semaines non allégées
+    let fractionne;
+    if (phase === "recup") fractionne = "fartlek";
+    else if (phase === "affutage" || phase === "course") fractionne = "rappel";
+    else if (phase === "specifique" && distanceObjectif >= 10) {
+      fractionne = ["specifique", "seuil", "800"][(semainesNormales - 1) % 3];
+    } else {
+      fractionne = ["800", "400", "seuil", "pyramide"][(semainesNormales - 1) % 4];
+    }
+
+    return { numero, total, phase, dureeLongue, fractionne };
+  }
+
+  const PHASES = {
+    fondation:  { nom: "Fondation",       texte: "On construit l'endurance, tranquillement." },
+    specifique: { nom: "Spécifique",      texte: "On travaille l'allure de ta course." },
+    recup:      { nom: "Semaine allégée", texte: "Moins de volume pour que le corps assimile le travail." },
+    affutage:   { nom: "Affûtage",        texte: "On réduit le volume pour arriver frais le jour J." },
+    course:     { nom: "Semaine de course", texte: "Garde de la fraîcheur : pas de muscu jambes lourde dans les 5 jours avant la course." },
+  };
+
   /* ---------- Contenu détaillé de chaque séance ---------- */
-  function detailSeance(seance, allures, distanceObjectif) {
+  function detailSeance(seance, allures, distanceObjectif, plan, indexFooting) {
     const footing = `${formatAllure(allures.footingMin)} – ${formatAllure(allures.footingMax)} /km`;
+    const a = v => `<strong>${formatAllure(v)} /km</strong>`;
+    const echauffement = `15 min d'échauffement en footing (${footing}).`;
+    const retourCalme = "10 min de retour au calme en footing.";
+    const allege = plan.phase === "recup" || plan.phase === "affutage" || plan.phase === "course";
+
     switch (seance) {
-      case "footing":
-        return {
-          titre: "Footing tranquille · 40 min",
-          lignes: ["Allure facile : tu dois pouvoir parler en courant.", "Option : 4 lignes droites de 80 m à la fin."],
-          allure: footing,
-        };
-      case "fractionne":
-        return {
-          titre: "Fractionné · 6 × 800 m",
-          lignes: [
-            `15 min d'échauffement en footing (${footing}).`,
-            `6 × 800 m à allure 5 km : <strong>${formatAllure(allures.vma5k)} /km</strong>.`,
-            "Récupération : 2 min en trottinant entre chaque.",
-            "10 min de retour au calme en footing.",
-          ],
-          allure: formatAllure(allures.vma5k) + " /km",
-        };
-      case "longue": {
-        const lignes = [`Allure facile (${footing}) presque tout le long.`];
-        if (distanceObjectif >= 10) {
-          lignes.push(`Les 10 dernières minutes à allure objectif : <strong>${formatAllure(allures.objectif)} /km</strong>.`);
+      case "footing": {
+        if (allege) {
+          return { titre: "Footing tranquille · 30 min", lignes: ["Semaine légère : reste bien en zone 2."], allure: footing };
         }
-        lignes.push("Augmente la durée de 10 % maximum d'une semaine à l'autre.");
-        return { titre: "Sortie longue · 1 h 10", lignes, allure: footing };
+        // On change de footing chaque semaine (et entre deux footings d'une même semaine)
+        const variantes = [
+          { titre: "Footing tranquille · 40 min", lignes: ["Allure facile : tu dois pouvoir parler en courant."] },
+          { titre: "Footing + lignes droites · 40 min", lignes: ["35 min en zone 2.", "Puis 6 lignes droites de 80 m, relâché, retour en marchant."] },
+          { titre: "Footing nature · 45 min", lignes: ["Sur chemins ou terrain varié, toujours en zone 2.", "Ralentis dans les montées pour rester facile."] },
+          { titre: "Footing + gammes · 40 min", lignes: ["30 min en zone 2.", "10 min de gammes : montées de genoux, talons-fesses, pas chassés."] },
+        ];
+        const v = variantes[(plan.numero + indexFooting) % variantes.length];
+        return { titre: v.titre, lignes: v.lignes, allure: footing };
+      }
+
+      case "fractionne": {
+        const seances = {
+          "800": {
+            titre: "Fractionné · 6 × 800 m",
+            lignes: [`6 × 800 m à allure 5 km : ${a(allures.vma5k)}.`, "Récupération : 2 min en trottinant."],
+            allure: allures.vma5k,
+          },
+          "400": {
+            titre: "Fractionné court · 10 × 400 m",
+            lignes: [`10 × 400 m à allure 3 km : ${a(allures.vitesse3k)}.`, "Récupération : 1 min 30 en trottinant."],
+            allure: allures.vitesse3k,
+          },
+          seuil: {
+            titre: "Seuil · 3 × 8 min",
+            lignes: [`3 × 8 min à allure seuil : ${a(allures.seuil)}.`, "Récupération : 2 min en trottinant.", "Effort « confortablement difficile »."],
+            allure: allures.seuil,
+          },
+          pyramide: {
+            titre: "Pyramide · 400-800-1200-800-400 m",
+            lignes: [`Chaque fraction à allure 5 km : ${a(allures.vma5k)}.`, "Récupération : la moitié du temps de l'effort, en trottinant."],
+            allure: allures.vma5k,
+          },
+          specifique: {
+            titre: "Allure course · 3 × 3 km",
+            lignes: [`3 × 3 km à allure objectif : ${a(allures.objectif)}.`, "Récupération : 3 min en trottinant."],
+            allure: allures.objectif,
+          },
+          fartlek: {
+            titre: "Fartlek léger · 35 min",
+            lignes: ["Footing en zone 2 avec 8 × 1 min un peu plus vite / 1 min lent.", "Semaine allégée : sans forcer."],
+            allure: null,
+          },
+          rappel: {
+            titre: "Rappel d'allure · 4 × 1 km",
+            lignes: [`4 × 1 km à allure objectif : ${a(allures.objectif)}.`, "Récupération : 2 min en trottinant.", "Juste pour garder le rythme, pas pour se fatiguer."],
+            allure: allures.objectif,
+          },
+        };
+        const s = seances[plan.fractionne];
+        const lignes = plan.fractionne === "fartlek" ? s.lignes : [echauffement, ...s.lignes, retourCalme];
+        return { titre: s.titre, lignes, allure: s.allure ? formatAllure(s.allure) + " /km" : footing };
+      }
+
+      case "longue": {
+        const duree = formatDuree(plan.dureeLongue * 60);
+        if (plan.phase === "course") {
+          return {
+            titre: "🏁 Semaine de course",
+            lignes: ["Si ta course tombe un autre jour : 30 à 40 min de footing très facile ici.", `Le jour J, vise ${a(allures.objectif)}.`],
+            allure: formatAllure(allures.objectif) + " /km",
+          };
+        }
+        const lignes = [];
+        if (plan.phase === "specifique" && distanceObjectif >= 21) {
+          lignes.push(`En zone 2 (${footing}), avec au milieu 2 × 15 min à allure objectif : ${a(allures.objectif)}.`);
+          lignes.push("5 min de footing entre les deux blocs.");
+        } else if (distanceObjectif >= 10 && plan.phase !== "recup" && plan.numero % 2 === 1) {
+          lignes.push(`En zone 2 (${footing}).`);
+          lignes.push(`Les 10 dernières minutes à allure objectif : ${a(allures.objectif)}.`);
+        } else {
+          lignes.push(`Tout en zone 2 (${footing}).`);
+        }
+        return { titre: "Sortie longue · " + duree, lignes, allure: footing };
       }
       case "jambes":
         return {
@@ -438,6 +565,8 @@
       footingMin: allureZ2 ? allureZ2 - 10 : allure10k * 1.35,  // borne rapide du footing
       footingMax: allureZ2 ? allureZ2 + 10 : allure10k * 1.45,  // borne lente du footing
       vma5k: predireTemps(equivalent10k, 10, 5) / 5,             // allure 5 km actuelle
+      vitesse3k: predireTemps(equivalent10k, 10, 3) / 3,         // allure 3 km (fractions courtes)
+      seuil: predireTemps(equivalent10k, 10, 15) / 15,           // allure seuil (environ 1 h de course)
     };
 
     // Temps estimé aujourd'hui sur la distance objectif
@@ -449,6 +578,18 @@
       const jours = (new Date(dateCourse + "T00:00:00") - new Date()) / 86400000;
       semainesRestantes = Math.max(0, Math.ceil(jours / 7));
     }
+
+    // Nombre de semaines du plan : de cette semaine jusqu'à la semaine de la course (12 si pas de date)
+    const lundiActuel = lundiDe(new Date());
+    let totalSemaines = 12;
+    if (dateCourse) {
+      const lundiCourse = lundiDe(new Date(dateCourse + "T00:00:00"));
+      totalSemaines = Math.max(1, Math.round((lundiCourse - lundiActuel) / (7 * 86400000)) + 1);
+    }
+    semaineAffichee = Math.min(Math.max(1, semaineAffichee), totalSemaines);
+    const plan = planDeLaSemaine(semaineAffichee, totalSemaines, distanceObjectif);
+    const debutSemaine = new Date(lundiActuel);
+    debutSemaine.setDate(debutSemaine.getDate() + 7 * (semaineAffichee - 1));
 
     const planning = JOURS.map((_, i) => document.getElementById("jour" + i).value);
     const { semaine, avertissements } = construireSemaine(planning);
@@ -464,7 +605,7 @@
       message = `Objectif nettement plus rapide que ton niveau estimé (${formatDuree(estimation)}). Il serait prudent de viser un chrono intermédiaire.`;
     }
 
-    afficherResultats({ allures, estimation, semainesRestantes, semaine, avertissements, message, distanceObjectif });
+    afficherResultats({ allures, estimation, semainesRestantes, semaine, avertissements, message, distanceObjectif, plan, debutSemaine });
   }
 
   function afficherErreur(texte) {
@@ -489,10 +630,20 @@
         <p class="message">${r.message}</p>
         ${r.avertissements.map(a => `<p class="message alerte">⚠️ ${a}</p>`).join("")}
       </div>
-      <h2>Ma semaine type</h2>`;
+      <div class="nav-semaine">
+        <button type="button" class="fleche" onclick="changerSemaine(-1)" ${r.plan.numero === 1 ? "disabled" : ""} aria-label="Semaine précédente">◀</button>
+        <div>
+          <strong>Semaine ${r.plan.numero} / ${r.plan.total}</strong>
+          <small>à partir du lundi ${r.debutSemaine.toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}</small>
+        </div>
+        <button type="button" class="fleche" onclick="changerSemaine(1)" ${r.plan.numero === r.plan.total ? "disabled" : ""} aria-label="Semaine suivante">▶</button>
+      </div>
+      <p class="message phase"><strong>${PHASES[r.plan.phase].nom}</strong> · ${PHASES[r.plan.phase].texte}</p>`;
 
+    let indexFooting = 0;
     r.semaine.forEach((jour, i) => {
-      const d = detailSeance(jour.seance, r.allures, r.distanceObjectif);
+      const d = detailSeance(jour.seance, r.allures, r.distanceObjectif, r.plan, indexFooting);
+      if (jour.seance === "footing") indexFooting++;
       html += `
         <div class="seance ${jour.type}">
           <div class="seance-tete">
@@ -514,6 +665,13 @@
     generer();
     document.getElementById("resultats").scrollIntoView({ behavior: "smooth" });
   });
+
+  // Flèches ◀ ▶ : passe à la semaine précédente ou suivante du plan
+  let semaineAffichee = 1;
+  function changerSemaine(sens) {
+    semaineAffichee += sens;
+    generer();
+  }
 
   // On génère une première fois au chargement, avec tes données
   generer();
