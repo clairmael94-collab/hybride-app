@@ -144,12 +144,34 @@
     .fleche { width: 48px; height: 48px; padding: 0; font-size: 1.1rem; flex-shrink: 0; }
     .fleche:disabled { opacity: 0.3; cursor: default; }
     .message.phase { margin: 10px 0 14px; }
+
+    /* ---------- Compteur de la semaine ---------- */
+    .compteur {
+      background: var(--carte); border: 1px solid var(--bordure); border-radius: 14px;
+      padding: 12px 16px; margin-bottom: 16px; font-size: 1rem;
+    }
+    .compteur.complet { background: var(--course-fond); color: var(--course); border-color: var(--course); }
+
+    /* ---------- Suivi : case "faite" + note ---------- */
+    .suivi { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--bordure); }
+    .case { display: flex; align-items: center; gap: 10px; font-size: 1rem; font-weight: 600; color: var(--texte); margin-bottom: 8px; cursor: pointer; }
+    .case input { width: 22px; height: 22px; margin: 0; accent-color: var(--course); }
+    .note-saisie { font-size: 0.95rem; padding: 8px 10px; }
+    .puces { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .puces button {
+      width: auto; font-size: 0.85rem; font-weight: 500; padding: 6px 10px;
+      border-radius: 999px; background: var(--fond); color: var(--texte); border: 1px solid var(--bordure);
+    }
+    .seance.faite { opacity: 0.75; }
+    .seance.faite .seance-titre::before { content: "✅ "; }
+    .conseil-douleur { margin: 8px 0 0; padding: 8px 10px; border-radius: 8px; font-size: 0.85rem; background: var(--alerte-fond); color: var(--alerte); }
   </style>
 </head>
 <body>
 <main>
   <h1>Ma semaine hybride</h1>
   <p class="sous-titre">Course à pied + muscu, organisées pour ne pas se gêner.</p>
+  <div id="compteur" class="compteur"></div>
 
   <!-- ========== FORMULAIRE ========== -->
   <form id="formulaire" class="carte">
@@ -644,8 +666,27 @@
     r.semaine.forEach((jour, i) => {
       const d = detailSeance(jour.seance, r.allures, r.distanceObjectif, r.plan, indexFooting);
       if (jour.seance === "footing") indexFooting++;
+      // Zone "séance faite + note" (pas pour les jours de repos)
+      const cle = cleSeance(r.debutSemaine, i);
+      const s = suivi[cle] || { fait: false, note: "" };
+      const zoneSuivi = jour.type === "repos" ? "" : `
+          <div class="suivi">
+            <label class="case">
+              <input type="checkbox" ${s.fait ? "checked" : ""} onchange="cocher('${cle}', this)">
+              Séance faite
+            </label>
+            <input class="note-saisie" id="note-${cle}" value="${echapper(s.note)}" placeholder="Note rapide (optionnel)"
+                   oninput="noter('${cle}', this.value)">
+            <div class="puces">
+              ${NOTES_RAPIDES.map(n => `<button type="button" onclick="ajouterNote('${cle}', '${n}')">${n}</button>`).join("")}
+            </div>
+            <p class="conseil-douleur" id="conseil-${cle}" ${contientDouleur(s.note) ? "" : "hidden"}>
+              Une douleur qui persiste ou augmente : mets la séance en pause et demande l'avis d'un professionnel de santé.
+            </p>
+          </div>`;
+
       html += `
-        <div class="seance ${jour.type}">
+        <div class="seance ${jour.type} ${s.fait ? "faite" : ""}" id="seance-${cle}">
           <div class="seance-tete">
             <span class="seance-jour">${JOURS[i]}</span>
             <span class="badge">${nomsType[jour.type]}</span>
@@ -653,11 +694,86 @@
           <div class="seance-titre">${d.titre}</div>
           <ul>${d.lignes.map(l => `<li>${l}</li>`).join("")}</ul>
           ${d.allure ? `<span class="allure">🎯 ${d.allure}</span>` : ""}
+          ${zoneSuivi}
         </div>`;
     });
 
     const zone = document.getElementById("resultats");
     zone.innerHTML = html;
+    majCompteur();
+  }
+
+  /* ---------- Suivi : séances faites et notes ---------- */
+  // Tout est enregistré dans le navigateur (localStorage), sous le nom "hybride-suivi".
+  // Exemple : { "2026-09-28-1": { fait: true, note: "Super forme" } }
+  //           = lundi 28 septembre + jour n°1 (mardi)
+  const CLE_STOCKAGE = "hybride-suivi";
+  const NOTES_RAPIDES = ["😴 Fatigué", "🤕 Douleur genou", "💪 Super forme"];
+
+  function chargerSuivi() {
+    try {
+      return JSON.parse(localStorage.getItem(CLE_STOCKAGE)) || {};
+    } catch (e) {
+      return {}; // navigateur en mode privé ou stockage bloqué : on repart de zéro
+    }
+  }
+  function sauverSuivi() {
+    try {
+      localStorage.setItem(CLE_STOCKAGE, JSON.stringify(suivi));
+    } catch (e) { /* stockage impossible : l'appli marche quand même, sans mémoire */ }
+  }
+  const suivi = chargerSuivi();
+
+  // Identifiant unique d'une séance : date du lundi + numéro du jour (0 = lundi … 6 = dimanche)
+  function cleSeance(lundi, jour) {
+    const aaaa = lundi.getFullYear();
+    const mm = String(lundi.getMonth() + 1).padStart(2, "0");
+    const jj = String(lundi.getDate()).padStart(2, "0");
+    return `${aaaa}-${mm}-${jj}-${jour}`;
+  }
+
+  function cocher(cle, caseACocher) {
+    suivi[cle] = { ...suivi[cle], fait: caseACocher.checked };
+    sauverSuivi();
+    document.getElementById("seance-" + cle).classList.toggle("faite", caseACocher.checked);
+    majCompteur();
+  }
+
+  function noter(cle, texte) {
+    suivi[cle] = { ...suivi[cle], note: texte };
+    sauverSuivi();
+    document.getElementById("conseil-" + cle).hidden = !contientDouleur(texte);
+  }
+
+  // Bouton de note rapide : ajoute le texte à la note existante
+  function ajouterNote(cle, texte) {
+    const champ = document.getElementById("note-" + cle);
+    if (champ.value.includes(texte)) return;
+    champ.value = champ.value.trim() ? champ.value.trim() + ", " + texte : texte;
+    noter(cle, champ.value);
+  }
+
+  function contientDouleur(texte) {
+    return /douleur|mal |blessure/i.test(texte || "");
+  }
+
+  // Évite qu'une note contenant " ou < casse la page
+  function echapper(texte) {
+    return (texte || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  }
+
+  // Compteur en haut de page : séances faites dans la semaine en cours (la vraie, d'après le calendrier)
+  function majCompteur() {
+    const lundi = lundiDe(new Date());
+    let prevues = 0, faites = 0;
+    JOURS.forEach((_, i) => {
+      if (document.getElementById("jour" + i).value === "repos") return;
+      prevues++;
+      if (suivi[cleSeance(lundi, i)]?.fait) faites++;
+    });
+    const compteur = document.getElementById("compteur");
+    compteur.innerHTML = `<strong>${faites} séance${faites > 1 ? "s" : ""} sur ${prevues}</strong> faite${faites > 1 ? "s" : ""} cette semaine`;
+    compteur.classList.toggle("complet", prevues > 0 && faites === prevues);
   }
 
   document.getElementById("formulaire").addEventListener("submit", e => {
