@@ -144,6 +144,11 @@
     .fleche { width: 48px; height: 48px; padding: 0; font-size: 1.1rem; flex-shrink: 0; }
     .fleche:disabled { opacity: 0.3; cursor: default; }
     .message.phase { margin: 10px 0 14px; }
+    .message.ajustement { margin: -6px 0 14px; background: var(--alerte-fond); color: var(--alerte); font-size: 0.92rem; }
+    .message.proposition { background: var(--course-fond); color: var(--texte); }
+    .boutons { display: flex; gap: 8px; margin-top: 10px; }
+    .boutons button { width: auto; flex: 1; padding: 10px; font-size: 0.95rem; }
+    .boutons .secondaire { background: var(--fond); color: var(--texte); border: 1px solid var(--bordure); }
 
     /* ---------- Aperçu du plan (barres) ---------- */
     .apercu { display: flex; align-items: flex-end; gap: 2px; height: 74px; margin: 12px 0 6px; }
@@ -495,7 +500,8 @@
 
   // Construit toutes les semaines du plan.
   // "modele" = la semaine type (quel jour = quelle séance), "jourCourse" = 0 (lundi) … 6 (dimanche)
-  function construirePlan(total, distanceObjectif, al, modele, jourCourse) {
+  // "bilanSemaine" = fonction qui dit ce que tu as vraiment fait une semaine donnée (voir plus bas)
+  function construirePlan(total, distanceObjectif, al, modele, jourCourse, bilanSemaine) {
     const plafond = PLAFONDS[distanceObjectif];
     const nbFootings = modele.filter(j => j.seance === "footing").length;
     const finBase = Math.ceil((total - 2) / 2); // la 1re moitié avant l'affûtage = Base
@@ -518,6 +524,24 @@
       else phase = "developpement";
       const semaineCourse = n === total && jourCourse !== null;
 
+      // 0) Adaptation à ce que tu as vraiment fait la semaine d'avant (pas de rattrapage)
+      const ajustements = [];
+      const bilan = prec ? bilanSemaine(prec) : null;
+      let progression = 1.08; // +8 % en temps normal
+      if (bilan && (phase === "base" || phase === "developpement")) {
+        if (bilan.fatigue || bilan.douleur) {
+          phase = "legere";
+          const quoi = bilan.douleur && bilan.fatigue ? "de la fatigue et une douleur" : bilan.douleur ? "une douleur" : "de la fatigue";
+          ajustements.push(`Semaine allégée car tu as noté ${quoi} la semaine dernière.`);
+        } else if (bilan.manquees >= 2) {
+          progression = 0.9;
+          ajustements.push(`Volume un peu réduit : ${bilan.manquees} séances de course manquées la semaine dernière. Pas de rattrapage, on reprend doucement.`);
+        } else if (bilan.manquees === 1) {
+          progression = 1;
+          ajustements.push("Pas d'augmentation cette semaine : 1 séance de course manquée la semaine dernière. Pas besoin de la rattraper.");
+        }
+      }
+
       // 1) Type de séances et volume visé.
       //    Semaine normale : +8 % de km par rapport à la semaine d'avant (fractionné compris).
       //    Semaine légère : footing + sortie longue -10 %, et fartlek tranquille.
@@ -527,7 +551,7 @@
         fractionne = rotations[phase][compteurs[phase]++ % 4];
         if (phase === "developpement") variante = distanceObjectif >= 21 ? "blocs" : "fin";
         else variante = distanceObjectif >= 10 && n % 2 === 1 ? "fin" : "z2";
-        enduranceVisee = n === 1 ? null : Math.min(plafond.km, prec.km * 1.08) - seanceFractionne(fractionne, al).km;
+        enduranceVisee = n === 1 ? null : Math.min(plafond.km, prec.km * progression) - seanceFractionne(fractionne, al).km;
       } else if (phase === "legere") {
         fractionne = "fartlek";
         variante = "z2";
@@ -549,6 +573,11 @@
           const kmParFooting = (enduranceVisee - kmLongue(minLongue, variante, al)) / nbFootings;
           minFooting = Math.min(60, Math.max(25, arrondi5(kmParFooting * al.footing / 60)));
         }
+      }
+      // Sortie longue manquée : la suivante ne s'allonge pas
+      if (bilan && bilan.longueManquee && !semaineCourse && minLongue > prec.minLongue) {
+        minLongue = prec.minLongue;
+        ajustements.push("Sortie longue pas allongée, car la précédente n'a pas été faite.");
       }
 
       // 3) Détail jour par jour, et total de km de la semaine
@@ -589,7 +618,7 @@
 
       const kmEndurance = jours.filter(j => j.seance === "footing" || j.seance === "longue").reduce((s, j) => s + j.km, 0);
       if (!semaineCourse) picEndurance = Math.max(picEndurance, kmEndurance);
-      semaines.push({ numero: n, total, phase, semaineCourse, fractionne, minLongue, variante, minFooting, jours, km: kmSemaine, kmEndurance });
+      semaines.push({ numero: n, total, phase, semaineCourse, fractionne, minLongue, variante, minFooting, jours, km: kmSemaine, kmEndurance, ajustements });
     }
     return semaines;
   }
@@ -717,26 +746,45 @@
       semainesRestantes = Math.max(0, Math.ceil(jours / 7));
     }
 
-    // Nombre de semaines du plan : de cette semaine jusqu'à la semaine de la course (12 si pas de date)
+    // Le plan commence le lundi où tu l'as créé (gardé en mémoire).
+    // Si tu changes la date de la course, un nouveau plan démarre cette semaine.
     const lundiActuel = lundiDe(new Date());
+    if (!reglages.debutPlan || reglages.datePlan !== dateCourse) {
+      reglages.debutPlan = cleSeance(lundiActuel, 0).slice(0, 10); // "2026-09-28"
+      reglages.datePlan = dateCourse;
+    }
+    const debutPlan = new Date(reglages.debutPlan + "T00:00:00");
+    const semaineActuelle = Math.round((lundiActuel - debutPlan) / (7 * 86400000)) + 1;
+
+    // Nombre de semaines du plan : jusqu'à la semaine de la course (12 si pas de date)
     let totalSemaines = 12;
     let jourCourse = null; // 0 = lundi … 6 = dimanche
     if (dateCourse) {
       const date = new Date(dateCourse + "T00:00:00");
       if (date < lundiActuel) return afficherErreur("La date de la course est déjà passée.");
-      totalSemaines = Math.round((lundiDe(date) - lundiActuel) / (7 * 86400000)) + 1;
+      totalSemaines = Math.round((lundiDe(date) - debutPlan) / (7 * 86400000)) + 1;
       jourCourse = (date.getDay() + 6) % 7;
     }
+    sauverReglages();
 
-    // Semaine type (quel jour = quelle séance), puis le plan complet semaine par semaine
+    // Semaine type (quel jour = quelle séance), puis le plan complet semaine par semaine,
+    // adapté à ce que tu as vraiment fait
     const planning = JOURS.map((_, i) => document.getElementById("jour" + i).value);
     const { semaine: modele, avertissements } = construireSemaine(planning);
-    const plan = construirePlan(totalSemaines, distanceObjectif, allures, modele, jourCourse);
+    const plan = construirePlan(totalSemaines, distanceObjectif, allures, modele, jourCourse,
+                                s => bilanSemaine(s, lundiDeLaSemaine(debutPlan, s.numero)));
 
+    if (semaineAffichee === null) semaineAffichee = semaineActuelle; // à l'ouverture : la semaine en cours
     semaineAffichee = Math.min(Math.max(1, semaineAffichee), totalSemaines);
     const semaine = plan[semaineAffichee - 1];
-    const debutSemaine = new Date(lundiActuel);
-    debutSemaine.setDate(debutSemaine.getDate() + 7 * (semaineAffichee - 1));
+    const debutSemaine = lundiDeLaSemaine(debutPlan, semaineAffichee);
+
+    // Messages qui dépendent de tes notes : douleur répétée, nouveau chrono
+    const alertes = [];
+    if (douleursRecentes() >= 2) {
+      alertes.push("Tu as noté une douleur au moins 2 fois ces 14 derniers jours. Lève le pied, et si la douleur persiste, consulte un professionnel de santé.");
+    }
+    const chrono = meilleurChronoNote(equivalent10k);
 
     // Message sur l'objectif (sans promesse)
     let message;
@@ -749,7 +797,121 @@
       message = `Objectif nettement plus rapide que ton niveau estimé (${formatDuree(estimation)}). Il serait prudent de viser un chrono intermédiaire.`;
     }
 
-    afficherResultats({ allures, estimation, semainesRestantes, semaine, avertissements, message, distanceObjectif, plan, debutSemaine });
+    afficherResultats({ allures, estimation, semainesRestantes, semaine, avertissements, message, distanceObjectif, plan, debutSemaine, alertes, chrono });
+  }
+
+  function lundiDeLaSemaine(debutPlan, numero) {
+    const d = new Date(debutPlan);
+    d.setDate(d.getDate() + 7 * (numero - 1));
+    return d;
+  }
+
+  /* ---------- Bilan : ce que tu as vraiment fait ---------- */
+
+  // Pour une semaine du plan : séances de course manquées (jours déjà passés et pas cochés),
+  // sortie longue manquée, et notes "fatigué" / "douleur"
+  function bilanSemaine(semaine, lundi) {
+    const aujourdhui = new Date();
+    aujourdhui.setHours(0, 0, 0, 0);
+    const bilan = { manquees: 0, longueManquee: false, fatigue: false, douleur: false };
+    semaine.jours.forEach((jour, i) => {
+      const s = suivi[cleSeance(lundi, i)] || {};
+      if (contientFatigue(s.note)) bilan.fatigue = true;
+      if (contientDouleur(s.note)) bilan.douleur = true;
+      const date = new Date(lundi);
+      date.setDate(date.getDate() + i);
+      if (date >= aujourdhui) return; // jour pas encore passé : on ne sait pas encore
+      if (jour.type === "course" && jour.km > 0 && !s.fait) {
+        bilan.manquees++;
+        if (jour.seance === "longue") bilan.longueManquee = true;
+      }
+    });
+    return bilan;
+  }
+
+  // Nombre de notes avec "douleur" sur les 14 derniers jours
+  function douleursRecentes() {
+    const limite = new Date();
+    limite.setHours(0, 0, 0, 0);
+    limite.setDate(limite.getDate() - 14);
+    return Object.entries(suivi).filter(([cle, s]) => {
+      const date = new Date(cle.slice(0, 10) + "T00:00:00");
+      date.setDate(date.getDate() + Number(cle.slice(11)));
+      return date >= limite && contientDouleur(s.note);
+    }).length;
+  }
+
+  // Cherche un chrono dans une note, par exemple "10 km en 44:30", "5km 20:45" ou "semi en 1:38:00"
+  function chronoDansNote(note) {
+    const m = (note || "").match(/(\d+(?:[.,]\d+)?)\s*km\s*(?:en\s*)?(\d{1,2}:\d{2}(?::\d{2})?)/i);
+    if (m) return { distance: parseFloat(m[1].replace(",", ".")), temps: lireTemps(m[2]) };
+    const semi = (note || "").match(/semi\S*\s*(?:en\s*)?(\d{1,2}:\d{2}:\d{2})/i);
+    if (semi) return { distance: 21.0975, temps: lireTemps(semi[1]) };
+    return null;
+  }
+
+  // Le chrono noté le plus "en avance" sur ce que tes allures prévoient (au moins 1 % plus rapide)
+  function meilleurChronoNote(equivalent10k) {
+    let meilleur = null;
+    Object.entries(suivi).forEach(([cle, s]) => {
+      if (s.chronoVu) return;
+      const c = chronoDansNote(s.note);
+      if (!c || !c.temps || c.distance < 3 || c.distance > 42.2) return;
+      const prevu = predireTemps(equivalent10k, 10, c.distance);
+      const avance = 1 - c.temps / prevu;
+      if (avance >= 0.01 && (!meilleur || avance > meilleur.avance)) meilleur = { ...c, cle, prevu, avance };
+    });
+    return meilleur;
+  }
+
+  // Bouton "Mettre à jour mes allures" : le nouveau chrono remplace l'ancien sur la même distance
+  // (ou, sinon, devient ton chrono de référence sur 10 km)
+  function appliquerChrono(cle) {
+    const c = chronoDansNote(suivi[cle].note);
+    const distances = [5, 10, 21.0975];
+    let ligne = [1, 2].find(n => Math.abs(Number(document.getElementById(`chrono${n}Dist`).value) - c.distance) < 0.1);
+    let distance = c.distance, temps = c.temps;
+    if (!distances.some(d => Math.abs(d - c.distance) < 0.1)) {
+      temps = predireTemps(c.temps, c.distance, 10);
+      distance = 10;
+      ligne = [1, 2].find(n => document.getElementById(`chrono${n}Dist`).value === "10") || 1;
+    }
+    ligne = ligne || 1;
+    document.getElementById(`chrono${ligne}Dist`).value = String(distances.find(d => Math.abs(d - distance) < 0.1));
+    document.getElementById(`chrono${ligne}Temps`).value = formatChrono(temps);
+    suivi[cle] = { ...suivi[cle], chronoVu: true };
+    sauverSuivi();
+    generer();
+  }
+
+  function ignorerChrono(cle) {
+    suivi[cle] = { ...suivi[cle], chronoVu: true };
+    sauverSuivi();
+    generer();
+  }
+
+  // secondes -> "44:30" ou "1:38:00"
+  function formatChrono(secondes) {
+    const s = Math.round(secondes);
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    const mmss = String(m).padStart(h ? 2 : 1, "0") + ":" + String(sec).padStart(2, "0");
+    return h ? h + ":" + mmss : mmss;
+  }
+
+  /* ---------- Réglages gardés en mémoire (objectif, chronos, jours, début du plan) ---------- */
+  const CLE_REGLAGES = "hybride-reglages";
+  const CHAMPS = ["objDistance", "objTemps", "objDate", "chrono1Dist", "chrono1Temps", "chrono2Dist", "chrono2Temps", "allureZ2",
+                  ...JOURS.map((_, i) => "jour" + i)];
+
+  function chargerReglages() {
+    let r = {};
+    try { r = JSON.parse(localStorage.getItem(CLE_REGLAGES)) || {}; } catch (e) { /* stockage bloqué */ }
+    CHAMPS.forEach(id => { if (r[id] !== undefined) document.getElementById(id).value = r[id]; });
+    return r;
+  }
+  function sauverReglages() {
+    CHAMPS.forEach(id => { reglages[id] = document.getElementById(id).value; });
+    try { localStorage.setItem(CLE_REGLAGES, JSON.stringify(reglages)); } catch (e) { /* stockage bloqué */ }
   }
 
   // Formate des km : 6.24 -> "6,2 km"
@@ -778,6 +940,17 @@
         </div>
         <p class="message">${r.message}</p>
         ${r.avertissements.map(a => `<p class="message alerte">⚠️ ${a}</p>`).join("")}
+        ${r.alertes.map(a => `<p class="message alerte">🩹 ${a}</p>`).join("")}
+        ${r.chrono ? `
+          <div class="message proposition">
+            🚀 Tu as noté <strong>${formatKm(r.chrono.distance)} en ${formatChrono(r.chrono.temps)}</strong>,
+            plus rapide que ce que tes allures prévoient (${formatChrono(r.chrono.prevu)}).
+            Mettre à jour tes allures (fractionné, seuil, allure course) ?
+            <div class="boutons">
+              <button type="button" onclick="appliquerChrono('${r.chrono.cle}')">Mettre à jour</button>
+              <button type="button" class="secondaire" onclick="ignorerChrono('${r.chrono.cle}')">Non merci</button>
+            </div>
+          </div>` : ""}
       </div>
       <div class="nav-semaine">
         <button type="button" class="fleche" onclick="changerSemaine(-1)" ${r.semaine.numero === 1 ? "disabled" : ""} aria-label="Semaine précédente">◀</button>
@@ -788,7 +961,8 @@
         <button type="button" class="fleche" onclick="changerSemaine(1)" ${r.semaine.numero === r.semaine.total ? "disabled" : ""} aria-label="Semaine suivante">▶</button>
       </div>
       ${apercuPlan(r.plan, r.semaine.numero)}
-      <p class="message phase"><span class="pastille ${r.semaine.phase}"></span><strong>${PHASES[r.semaine.phase].nom}</strong> · ${r.semaine.semaineCourse ? "Semaine de la course ! Muscu remplacée par de la mobilité." : PHASES[r.semaine.phase].texte}</p>`;
+      <p class="message phase"><span class="pastille ${r.semaine.phase}"></span><strong>${PHASES[r.semaine.phase].nom}</strong> · ${r.semaine.semaineCourse ? "Semaine de la course ! Muscu remplacée par de la mobilité." : PHASES[r.semaine.phase].texte}</p>
+      ${r.semaine.ajustements.map(a => `<p class="message ajustement">🔄 ${a}</p>`).join("")}`;
 
     let indexFooting = 0;
     r.semaine.jours.forEach((jour, i) => {
@@ -803,8 +977,8 @@
               <input type="checkbox" ${s.fait ? "checked" : ""} onchange="cocher('${cle}', this)">
               Séance faite
             </label>
-            <input class="note-saisie" id="note-${cle}" value="${echapper(s.note)}" placeholder="Note rapide (optionnel)"
-                   oninput="noter('${cle}', this.value)">
+            <input class="note-saisie" id="note-${cle}" value="${echapper(s.note)}" placeholder="Note (ex : fatigué, 10 km en 44:30)"
+                   oninput="noter('${cle}', this.value)" onchange="generer()">
             <div class="puces">
               ${NOTES_RAPIDES.map(n => `<button type="button" onclick="ajouterNote('${cle}', '${n}')">${n}</button>`).join("")}
             </div>
@@ -877,8 +1051,7 @@
   function cocher(cle, caseACocher) {
     suivi[cle] = { ...suivi[cle], fait: caseACocher.checked };
     sauverSuivi();
-    document.getElementById("seance-" + cle).classList.toggle("faite", caseACocher.checked);
-    majCompteur();
+    generer(); // le plan des semaines suivantes peut changer
   }
 
   function noter(cle, texte) {
@@ -893,6 +1066,11 @@
     if (champ.value.includes(texte)) return;
     champ.value = champ.value.trim() ? champ.value.trim() + ", " + texte : texte;
     noter(cle, champ.value);
+    generer();
+  }
+
+  function contientFatigue(texte) {
+    return /fatigu/i.test(texte || "");
   }
 
   function contientDouleur(texte) {
@@ -925,7 +1103,7 @@
   });
 
   // Flèches ◀ ▶ : passe à la semaine précédente ou suivante du plan
-  let semaineAffichee = 1;
+  let semaineAffichee = null; // null = la semaine en cours
   function changerSemaine(sens) {
     semaineAffichee += sens;
     generer();
@@ -935,7 +1113,8 @@
     generer();
   }
 
-  // On génère une première fois au chargement, avec tes données
+  // Au chargement : on remet tes réglages enregistrés, puis on calcule le plan
+  const reglages = chargerReglages();
   generer();
 </script>
 </body>
