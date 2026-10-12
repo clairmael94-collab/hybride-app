@@ -219,6 +219,21 @@
     .reglages summary { font-weight: 700; font-size: 1.05rem; cursor: pointer; }
     .boutons-reglages { display: grid; gap: 10px; margin-top: 14px; }
     button.danger { background: transparent; color: #dc2626; border: 1px solid #dc2626; }
+
+    /* ---------- Avis ---------- */
+    .lien-avis { text-align: center; margin: 8px 0 0; }
+    .lien-avis button { width: auto; background: none; color: var(--texte-doux); font-size: 0.9rem; font-weight: 500; text-decoration: underline; padding: 8px; }
+    dialog {
+      width: min(560px, calc(100% - 32px)); max-height: calc(100% - 32px); border: 1px solid var(--bordure);
+      border-radius: 16px; padding: 18px; background: var(--carte); color: var(--texte);
+    }
+    dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+    dialog label { margin-top: 12px; color: var(--texte); font-weight: 600; }
+    textarea {
+      width: 100%; font: inherit; padding: 10px 12px; border: 1px solid var(--bordure); border-radius: 10px;
+      background: var(--fond); color: var(--texte); resize: vertical;
+    }
+    button:disabled { opacity: 0.6; }
   </style>
 </head>
 <body>
@@ -316,6 +331,30 @@
         <button type="submit" style="margin-top:20px">Enregistrer et recalculer</button>
       </form>
     </details>
+
+    <!-- Avis des testeurs -->
+    <p class="lien-avis" id="lienAvis" hidden><button type="button" onclick="ouvrirAvis()">💬 Donner mon avis</button></p>
+    <dialog id="avis">
+      <form id="formAvis">
+        <h2>💬 Ton avis</h2>
+        <p class="aide-q">Réponds à ce que tu veux, même en quelques mots. Merci !</p>
+        <label for="avisPlu">Qu'est-ce qui t'a plu ?</label>
+        <textarea id="avisPlu" rows="3"></textarea>
+        <label for="avisGene">Qu'est-ce qui t'a gêné ?</label>
+        <textarea id="avisGene" rows="3"></textarea>
+        <label for="avisManque">Qu'est-ce qui manque ?</label>
+        <textarea id="avisManque" rows="3"></textarea>
+        <!-- Piège à robots : un humain ne voit pas cette case et ne la coche pas -->
+        <input type="checkbox" id="avisRobot" tabindex="-1" autocomplete="off" hidden>
+        <p class="aide">Ton avis est envoyé par e-mail au créateur de l'appli, via le service Web3Forms. Il est anonyme : n'y mets pas d'informations personnelles.</p>
+        <p class="erreur" id="avisErreur" hidden></p>
+        <p class="message proposition" id="avisMerci" hidden>Merci, ton avis est bien envoyé ! 🙏</p>
+        <div class="nav-q">
+          <button type="button" class="secondaire" onclick="document.getElementById('avis').close()">Fermer</button>
+          <button type="submit" id="avisEnvoyer">Envoyer</button>
+        </div>
+      </form>
+    </dialog>
   </section>
 
   <p class="note">
@@ -1451,6 +1490,60 @@
     } catch (e) { /* stockage bloqué : rien à effacer */ }
     location.reload();
   }
+
+  /* ---------- "Donner mon avis" (envoyé par e-mail grâce à Web3Forms, sans serveur) ---------- */
+  // Clé publique Web3Forms : elle sert seulement à t'envoyer les avis par e-mail.
+  // Tant qu'elle est vide, le bouton "Donner mon avis" reste caché.
+  const CLE_WEB3FORMS = "";
+
+  document.getElementById("lienAvis").hidden = !CLE_WEB3FORMS;
+
+  function ouvrirAvis() {
+    document.getElementById("avisErreur").hidden = true;
+    document.getElementById("avisMerci").hidden = true;
+    document.getElementById("avisEnvoyer").disabled = false;
+    document.getElementById("avis").showModal();
+  }
+
+  document.getElementById("formAvis").addEventListener("submit", async e => {
+    e.preventDefault();
+    const champ = id => document.getElementById(id).value.trim();
+    const reponses = { plu: champ("avisPlu"), gene: champ("avisGene"), manque: champ("avisManque") };
+    const erreur = document.getElementById("avisErreur");
+    erreur.hidden = true;
+    if (!reponses.plu && !reponses.gene && !reponses.manque) {
+      erreur.textContent = "Écris au moins une réponse avant d'envoyer.";
+      erreur.hidden = false;
+      return;
+    }
+    const bouton = document.getElementById("avisEnvoyer");
+    bouton.disabled = true;
+    bouton.textContent = "Envoi…";
+    try {
+      const reponse = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          access_key: CLE_WEB3FORMS,
+          subject: "Nouvel avis sur l'appli hybride",
+          from_name: "Appli hybride",
+          botcheck: document.getElementById("avisRobot").checked,
+          "Ce qui a plu": reponses.plu || "—",
+          "Ce qui a gêné": reponses.gene || "—",
+          "Ce qui manque": reponses.manque || "—",
+        }),
+      });
+      const resultat = await reponse.json();
+      if (!resultat.success) throw new Error(resultat.message);
+      ["avisPlu", "avisGene", "avisManque"].forEach(id => { document.getElementById(id).value = ""; });
+      document.getElementById("avisMerci").hidden = false;
+    } catch (err) {
+      erreur.textContent = "L'envoi n'a pas marché (pas de connexion ?). Réessaie dans un moment.";
+      erreur.hidden = false;
+      bouton.disabled = false;
+    }
+    bouton.textContent = "Envoyer";
+  });
 
   // Flèches ◀ ▶ : passe à la semaine précédente ou suivante du plan
   let semaineAffichee = null; // null = la semaine en cours
