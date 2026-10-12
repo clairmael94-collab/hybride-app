@@ -183,84 +183,140 @@
     .seance.faite { opacity: 0.75; }
     .seance.faite .seance-titre::before { content: "✅ "; }
     .conseil-douleur { margin: 8px 0 0; padding: 8px 10px; border-radius: 8px; font-size: 0.85rem; background: var(--alerte-fond); color: var(--alerte); }
+
+    /* ---------- Écran d'accueil (questions) ---------- */
+    .progression { height: 6px; background: var(--fond); border-radius: 999px; overflow: hidden; }
+    .progression div { height: 100%; background: var(--accent); transition: width 0.2s; }
+    .etape-num { font-size: 0.8rem; color: var(--texte-doux); margin: 6px 0 14px; }
+    .question { font-size: 1.35rem; margin-bottom: 6px; }
+    .aide-q { color: var(--texte-doux); font-size: 0.9rem; margin: 4px 0 12px; }
+    .contenu-q { margin: 14px 0; }
+    .contenu-q p { margin: 0 0 10px; }
+    .nav-q { display: flex; gap: 10px; margin-top: 18px; }
+    .nav-q button { flex: 1; }
+    button.secondaire { background: var(--fond); color: var(--texte); border: 1px solid var(--bordure); }
+    button.large { margin-top: 14px; }
+    .choix { display: grid; gap: 10px; }
+    .choix button, .nombres button, .segment button {
+      background: var(--fond); color: var(--texte); border: 2px solid var(--bordure); text-align: left;
+    }
+    .choix button small { display: block; font-weight: 400; color: var(--texte-doux); font-size: 0.85rem; margin-top: 2px; }
+    .choix button.choisi, .nombres button.choisi { border-color: var(--accent); background: var(--carte); }
+    .sous-q { font-weight: 600; margin: 14px 0 8px !important; }
+    .nombres { display: flex; gap: 8px; }
+    .nombres button { flex: 1; text-align: center; padding: 12px 0; }
+    .jour-q { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .jour-q span { font-weight: 600; width: 80px; flex-shrink: 0; }
+    .segment { display: flex; flex: 1; gap: 4px; }
+    .segment button { flex: 1; padding: 9px 0; font-size: 0.85rem; text-align: center; border-width: 1px; }
+    .segment button.choisi.course { background: var(--course-fond); color: var(--course); border-color: var(--course); }
+    .segment button.choisi.muscu { background: var(--muscu-fond); color: var(--muscu); border-color: var(--muscu); }
+    .segment button.choisi.repos { background: var(--repos-fond); color: var(--texte); border-color: var(--repos); }
+    .resume { padding-left: 0; list-style: none; }
+    .resume li { margin-bottom: 8px; }
+
+    /* ---------- Réglages ---------- */
+    .reglages summary { font-weight: 700; font-size: 1.05rem; cursor: pointer; }
+    .boutons-reglages { display: grid; gap: 10px; margin-top: 14px; }
+    button.danger { background: transparent; color: #dc2626; border: 1px solid #dc2626; }
   </style>
 </head>
 <body>
 <main>
   <h1>Ma semaine hybride</h1>
   <p class="sous-titre">Course à pied + muscu, organisées pour ne pas se gêner.</p>
-  <div id="compteur" class="compteur"></div>
+  <div id="compteur" class="compteur" hidden></div>
 
-  <!-- ========== FORMULAIRE ========== -->
-  <form id="formulaire" class="carte">
-    <h2>Mon objectif</h2>
-    <div class="grille">
-      <div>
-        <label for="objDistance">Distance</label>
-        <select id="objDistance">
-          <option value="5">5 km</option>
-          <option value="10">10 km</option>
-          <option value="21.0975" selected>Semi</option>
-          <option value="42.195">Marathon</option>
-        </select>
-      </div>
-      <div>
-        <label for="objTemps">Chrono visé</label>
-        <input id="objTemps" value="1:40:00" placeholder="h:mm:ss">
-      </div>
-      <div class="plein">
-        <label for="objDate">Date de la course</label>
-        <input id="objDate" type="date" value="2027-04-01">
-      </div>
-    </div>
+  <!-- ========== ÉCRAN D'ACCUEIL (questions une par une) ========== -->
+  <section id="accueil" class="carte" hidden></section>
 
-    <h2>Mes chronos récents</h2>
-    <div class="grille">
-      <div>
-        <label for="chrono1Dist">Distance</label>
-        <select id="chrono1Dist">
-          <option value="5">5 km</option>
-          <option value="10" selected>10 km</option>
-          <option value="21.0975">Semi</option>
-        </select>
-      </div>
-      <div>
-        <label for="chrono1Temps">Temps</label>
-        <input id="chrono1Temps" value="45:00" placeholder="mm:ss">
-      </div>
-      <div>
-        <label for="chrono2Dist">Distance</label>
-        <select id="chrono2Dist">
-          <option value="5" selected>5 km</option>
-          <option value="10">10 km</option>
-          <option value="21.0975">Semi</option>
-        </select>
-      </div>
-      <div>
-        <label for="chrono2Temps">Temps</label>
-        <input id="chrono2Temps" value="21:00" placeholder="mm:ss">
-      </div>
-    </div>
-    <p class="aide">Format : 21:00 pour 21 minutes, 1:40:00 pour 1 h 40. Laisse vide si tu n'as pas de chrono.</p>
-
-    <h2 style="margin-top:20px">Mon allure zone 2</h2>
-    <div class="grille">
-      <div class="plein">
-        <label for="allureZ2">Allure footing (min/km)</label>
-        <input id="allureZ2" value="6:30" placeholder="m:ss">
-      </div>
-    </div>
-    <p class="aide">L'allure où tu restes en zone 2 (endurance facile). Laisse vide pour une estimation à partir de tes chronos.</p>
-
-    <h2 style="margin-top:20px">Mes jours disponibles</h2>
-    <div class="jours" id="jours"></div>
-
+  <!-- ========== L'APPLI ========== -->
+  <section id="appli" hidden>
     <p class="erreur" id="erreur" hidden></p>
-    <button type="submit" style="margin-top:20px">Générer ma semaine</button>
-  </form>
+    <section id="resultats"></section>
 
-  <!-- ========== RÉSULTATS ========== -->
-  <section id="resultats"></section>
+    <!-- Réglages -->
+    <details class="carte reglages" id="reglages">
+      <summary>⚙️ Réglages</summary>
+      <div class="boutons-reglages">
+        <button type="button" onclick="ouvrirQuestionnaire(true)">✏️ Modifier mon profil</button>
+        <button type="button" class="danger" onclick="recommencerAZero()">🗑️ Recommencer à zéro</button>
+      </div>
+      <h2 style="margin-top:20px">Réglages détaillés</h2>
+      <form id="formulaire">
+        <h2>Mon objectif</h2>
+        <div class="grille">
+          <div>
+            <label for="objDistance">Distance</label>
+            <select id="objDistance">
+              <option value="5">5 km</option>
+              <option value="10">10 km</option>
+              <option value="21.0975" selected>Semi</option>
+              <option value="42.195">Marathon</option>
+            </select>
+          </div>
+          <div>
+            <label for="objTemps">Chrono visé</label>
+            <input id="objTemps" placeholder="h:mm:ss">
+          </div>
+          <div class="plein">
+            <label for="objDate">Date de la course</label>
+            <input id="objDate" type="date">
+          </div>
+        </div>
+
+        <h2>Mes chronos récents</h2>
+        <div class="grille">
+          <div>
+            <label for="chrono1Dist">Distance</label>
+            <select id="chrono1Dist">
+              <option value="5">5 km</option>
+              <option value="10" selected>10 km</option>
+              <option value="21.0975">Semi</option>
+            </select>
+          </div>
+          <div>
+            <label for="chrono1Temps">Temps</label>
+            <input id="chrono1Temps" placeholder="mm:ss">
+          </div>
+          <div>
+            <label for="chrono2Dist">Distance</label>
+            <select id="chrono2Dist">
+              <option value="5" selected>5 km</option>
+              <option value="10">10 km</option>
+              <option value="21.0975">Semi</option>
+            </select>
+          </div>
+          <div>
+            <label for="chrono2Temps">Temps</label>
+            <input id="chrono2Temps" placeholder="mm:ss">
+          </div>
+        </div>
+        <p class="aide">Format : 21:00 pour 21 minutes, 1:40:00 pour 1 h 40. Laisse vide si tu n'as pas de chrono.</p>
+
+        <h2 style="margin-top:20px">Mon allure zone 2</h2>
+        <div class="grille">
+          <div class="plein">
+            <label for="allureZ2">Allure footing (min/km)</label>
+            <input id="allureZ2" placeholder="m:ss">
+          </div>
+        </div>
+        <p class="aide">L'allure où tu restes en zone 2 (endurance facile). Laisse vide pour une estimation à partir de tes chronos.</p>
+
+        <h2 style="margin-top:20px">Mes jours disponibles</h2>
+        <div class="jours" id="jours"></div>
+
+        <h2 style="margin-top:20px">Mon niveau en muscu</h2>
+        <select id="niveauMuscu">
+          <option value="debutant">Débutant</option>
+          <option value="intermediaire" selected>Intermédiaire</option>
+          <option value="avance">Avancé</option>
+        </select>
+
+        <button type="submit" style="margin-top:20px">Enregistrer et recalculer</button>
+      </form>
+    </details>
+  </section>
 
   <p class="note">
     Ces repères sont des estimations générales, pas un avis médical.
@@ -271,8 +327,14 @@
 <script>
   /* ---------- Données de départ ---------- */
   const JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
-  // Ce que tu fais chaque jour par défaut (dans l'ordre de JOURS)
-  const PLANNING_DEFAUT = ["muscu", "course", "muscu", "course", "repos", "muscu", "course"];
+  // Profil qui était écrit dans la page avant l'écran d'accueil (celui du 1er utilisateur).
+  // Il ne sert qu'à garder intactes les données de quelqu'un qui utilisait déjà l'appli.
+  const ANCIEN_PROFIL = {
+    objDistance: "21.0975", objTemps: "1:40:00", objDate: "2027-04-01",
+    chrono1Dist: "10", chrono1Temps: "45:00", chrono2Dist: "5", chrono2Temps: "21:00",
+    allureZ2: "6:30", niveauMuscu: "intermediaire",
+    jour0: "muscu", jour1: "course", jour2: "muscu", jour3: "course", jour4: "repos", jour5: "muscu", jour6: "course",
+  };
 
   // Crée les 7 menus déroulants (un par jour)
   const conteneurJours = document.getElementById("jours");
@@ -287,7 +349,6 @@
         <option value="muscu">Muscu</option>
       </select>`;
     conteneurJours.appendChild(ligne);
-    document.getElementById("jour" + i).value = PLANNING_DEFAUT[i];
   });
 
   /* ---------- Petits outils de calcul ---------- */
@@ -512,7 +573,7 @@
     const compteurs = { base: 0, developpement: 0 };
     const semaines = [];
     let picEndurance = 0; // plus gros volume de footing + sortie longue déjà fait
-    // Part de la sortie longue dans l'endurance : comme tes habitudes (1 h 10 de sortie longue, 40 min par footing)
+    // Part de la sortie longue dans l'endurance (environ 1 h 10 de sortie longue pour 40 min de footing)
     const partLongue = 70 / (70 + 40 * nbFootings);
 
     for (let n = 1; n <= total; n++) {
@@ -563,9 +624,11 @@
       }
       const kmFrac = seanceFractionne(fractionne, al).km;
 
-      // 2) Répartition entre sortie longue et footings (comme tes habitudes : 1 h 10 et 40 min).
-      //    La semaine 1 reprend exactement tes habitudes.
-      let minFooting = 40, minLongue = Math.min(70, plafond.longue);
+      // 2) Répartition entre sortie longue et footings.
+      //    Semaine 1 : un point de départ prudent selon la course visée
+      //    (semi et marathon : footing 40 min et sortie longue 1 h 10 ; 10 km : 35 min et 1 h ; 5 km : 35 min et 50 min).
+      let minFooting = distanceObjectif >= 21 ? 40 : 35;
+      let minLongue = Math.min(70, arrondi5(plafond.longue * 0.8));
       if (enduranceVisee !== null) {
         minLongue = minutesLongue(enduranceVisee * partLongue, variante, al);
         minLongue = Math.min(plafond.longue, Math.max(45, minLongue));
@@ -631,19 +694,41 @@
     complet: { nom: "Muscu complète", min: 45, exos: [["Squat", 3, "6"], ["Développé couché ou pompes", 3, "8"], ["Rowing", 3, "8"], ["Gainage", 3, "40 s"]] },
   };
 
+  // Pour les débutants : des versions plus simples à apprendre
+  const VERSION_DEBUTANT = {
+    "Squat": "Goblet squat (avec un haltère)",
+    "Soulevé de terre jambes tendues": "Soulevé de terre jambes tendues (haltères légers)",
+    "Développé couché ou pompes": "Pompes (sur les genoux si besoin)",
+    "Tractions ou rowing": "Rowing avec un haltère",
+    "Développé militaire": "Développé épaules avec haltères",
+    "Rowing": "Rowing avec un haltère",
+  };
+  const CONSEIL_NIVEAU = {
+    debutant: "Charges légères : la technique d'abord. Garde 3 à 4 répétitions en réserve.",
+    intermediaire: "Garde 2 répétitions en réserve à chaque série.",
+    avance: "Charges lourdes possibles : garde 1 à 2 répétitions en réserve.",
+  };
+
   function detailSeance(jour, al, semaine, distanceObjectif, indexFooting) {
     const footing = `${formatAllure(al.footingMin)} – ${formatAllure(al.footingMax)} /km`;
     const a = v => `<strong>${formatAllure(v)} /km</strong>`;
     const avecKm = d => ({ ...d, km: jour.km });
 
-    // Muscu (allégée pendant l'affûtage : 1 série en moins, séance plus courte)
+    // Muscu, selon ton niveau (et allégée pendant l'affûtage : 1 série en moins, séance plus courte)
     if (MUSCU[jour.seance]) {
       const m = MUSCU[jour.seance];
+      const niveau = document.getElementById("niveauMuscu").value;
       const allege = semaine.phase === "affutage";
-      const lignes = m.exos.map(([nom, series, reps]) => `${nom} ${allege ? Math.max(2, series - 1) : series} × ${reps}`);
+      const lignes = m.exos.map(([nom, series, reps], k) => {
+        if (niveau === "debutant") { nom = VERSION_DEBUTANT[nom] || nom; series = Math.max(2, series - 1); }
+        if (niveau === "avance" && k < 2) series++; // 1 série de plus sur les 2 gros exercices
+        if (allege) series = Math.max(2, series - 1);
+        return `${nom} ${series} × ${reps}`;
+      });
       if (m.fin) lignes.push(m.fin);
-      if (allege) lignes.push("Charges habituelles, mais arrête-toi loin de l'échec.");
-      return { titre: `${m.nom}${allege ? " (allégée)" : ""} · ${m.min - (allege ? 10 : 0)} min`, lignes };
+      lignes.push(allege ? "Charges habituelles, mais arrête-toi loin de l'échec." : CONSEIL_NIVEAU[niveau]);
+      const duree = m.min - (niveau === "debutant" ? 10 : 0) - (allege ? 10 : 0);
+      return { titre: `${m.nom}${allege ? " (allégée)" : ""} · ${duree} min`, lignes };
     }
 
     switch (jour.seance) {
@@ -714,10 +799,13 @@
       .filter(c => c.temps);
 
     if (!tempsObjectif) return afficherErreur("Le chrono visé n'est pas au bon format (exemple : 1:40:00).");
-    if (chronos.length === 0) return afficherErreur("Entre au moins un chrono récent (exemple : 45:00).");
 
-    // Niveau actuel : on convertit chaque chrono en "équivalent 10 km", puis on fait la moyenne
-    const equivalent10k = chronos.reduce((s, c) => s + predireTemps(c.temps, c.distance, 10), 0) / chronos.length;
+    // Niveau actuel : on convertit chaque chrono en "équivalent 10 km", puis on fait la moyenne.
+    // Sans chrono : on part de l'objectif, en supposant prudemment un niveau 5 % plus lent.
+    const sansChrono = chronos.length === 0;
+    const equivalent10k = sansChrono
+      ? predireTemps(tempsObjectif * 1.05, distanceObjectif, 10)
+      : chronos.reduce((s, c) => s + predireTemps(c.temps, c.distance, 10), 0) / chronos.length;
     const allure10k = equivalent10k / 10;
 
     // Allure footing : ta zone 2 si tu l'as donnée (± 10 s), sinon une estimation prudente
@@ -789,7 +877,9 @@
     // Message sur l'objectif (sans promesse)
     let message;
     const ratio = tempsObjectif / estimation;
-    if (ratio >= 1) {
+    if (sansChrono) {
+      message = "Sans chrono récent, tes allures sont estimées prudemment à partir de ton objectif. Quand tu fais un test, note-le dans une séance (ex : « 5 km en 25:00 ») pour les ajuster.";
+    } else if (ratio >= 1) {
       message = `D'après tes chronos, ton niveau actuel est déjà proche de cet objectif (estimation : ${formatDuree(estimation)}). Reste régulier.`;
     } else if (ratio >= 0.95) {
       message = `Objectif un peu plus rapide que ton niveau estimé (${formatDuree(estimation)}) : il faudra progresser, régulièrement et sans brûler les étapes.`;
@@ -797,7 +887,7 @@
       message = `Objectif nettement plus rapide que ton niveau estimé (${formatDuree(estimation)}). Il serait prudent de viser un chrono intermédiaire.`;
     }
 
-    afficherResultats({ allures, estimation, semainesRestantes, semaine, avertissements, message, distanceObjectif, plan, debutSemaine, alertes, chrono });
+    afficherResultats({ allures, estimation: sansChrono ? null : estimation, semainesRestantes, semaine, avertissements, message, distanceObjectif, plan, debutSemaine, alertes, chrono });
   }
 
   function lundiDeLaSemaine(debutPlan, numero) {
@@ -900,7 +990,7 @@
 
   /* ---------- Réglages gardés en mémoire (objectif, chronos, jours, début du plan) ---------- */
   const CLE_REGLAGES = "hybride-reglages";
-  const CHAMPS = ["objDistance", "objTemps", "objDate", "chrono1Dist", "chrono1Temps", "chrono2Dist", "chrono2Temps", "allureZ2",
+  const CHAMPS = ["objDistance", "objTemps", "objDate", "chrono1Dist", "chrono1Temps", "chrono2Dist", "chrono2Temps", "allureZ2", "niveauMuscu",
                   ...JOURS.map((_, i) => "jour" + i)];
 
   function chargerReglages() {
@@ -934,7 +1024,7 @@
         <h2>Mes repères</h2>
         <div class="stats">
           <div class="stat"><small>Allure objectif</small><strong>${formatAllure(r.allures.objectif)} /km</strong></div>
-          <div class="stat"><small>Niveau estimé</small><strong>${formatDuree(r.estimation)}</strong></div>
+          <div class="stat"><small>Niveau estimé</small><strong>${r.estimation ? formatDuree(r.estimation) : "—"}</strong></div>
           <div class="stat"><small>Allure footing</small><strong>${formatAllure(r.allures.footingMin)}–${formatAllure(r.allures.footingMax)}</strong></div>
           <div class="stat"><small>Course dans</small><strong>${r.semainesRestantes !== null ? r.semainesRestantes + " sem." : "—"}</strong></div>
         </div>
@@ -1092,6 +1182,7 @@
       if (suivi[cleSeance(lundi, i)]?.fait) faites++;
     });
     const compteur = document.getElementById("compteur");
+    compteur.hidden = false;
     compteur.innerHTML = `<strong>${faites} séance${faites > 1 ? "s" : ""} sur ${prevues}</strong> faite${faites > 1 ? "s" : ""} cette semaine`;
     compteur.classList.toggle("complet", prevues > 0 && faites === prevues);
   }
@@ -1101,6 +1192,265 @@
     generer();
     document.getElementById("resultats").scrollIntoView({ behavior: "smooth" });
   });
+
+  /* ---------- Écran d'accueil : les questions, une par une ---------- */
+  let q = null;          // les réponses en cours
+  let etapeQ = 0;        // numéro de l'étape affichée
+  let modeModif = false; // true = "Modifier mon profil" (on part des réponses actuelles)
+
+  const NOMS_DISTANCE = { "5": "5 km", "10": "10 km", "21.0975": "Semi-marathon", "42.195": "Marathon" };
+  const EXEMPLE_CHRONO = { "5": "25:00", "10": "52:00", "21.0975": "1:55:00", "42.195": "4:00:00" };
+  const NOMS_TYPE = { repos: "Repos", course: "Course", muscu: "Muscu" };
+  const NOMS_NIVEAU = { debutant: "Débutant", intermediaire: "Intermédiaire", avance: "Avancé" };
+
+  function ouvrirQuestionnaire(modifier) {
+    modeModif = modifier;
+    const val = id => document.getElementById(id).value;
+    q = { distance: null, chrono: "", date: "", c5: "", c10: "", nbCourse: 3, nbMuscu: 2, jours: null, niveau: null };
+    if (modifier) {
+      q.distance = val("objDistance");
+      q.chrono = val("objTemps");
+      q.date = val("objDate");
+      q.niveau = val("niveauMuscu");
+      [1, 2].forEach(n => {
+        if (val(`chrono${n}Dist`) === "5") q.c5 = val(`chrono${n}Temps`);
+        if (val(`chrono${n}Dist`) === "10") q.c10 = val(`chrono${n}Temps`);
+      });
+      q.jours = JOURS.map((_, i) => val("jour" + i));
+      q.nbCourse = q.jours.filter(j => j === "course").length;
+      q.nbMuscu = q.jours.filter(j => j === "muscu").length;
+    }
+    etapeQ = modifier ? 1 : 0; // en modification, on saute le message de bienvenue
+    document.getElementById("appli").hidden = true;
+    document.getElementById("compteur").hidden = true;
+    document.getElementById("accueil").hidden = false;
+    afficherEtape();
+    window.scrollTo(0, 0);
+  }
+
+  // La liste des étapes (la question "niveau en muscu" n'apparaît que s'il y a de la muscu)
+  function etapes() {
+    const nbMuscu = q.jours ? q.jours.filter(j => j === "muscu").length : q.nbMuscu;
+    return ["bienvenue", "distance", "chrono", "date", "chronos", "nombre", "jours", ...(nbMuscu > 0 ? ["niveau"] : []), "fin"];
+  }
+
+  // Boutons de choix (une réponse parmi plusieurs) : toucher = choisir et passer à la suite
+  function boutonsChoix(cle, options) {
+    return `<div class="choix">${options.map(([valeur, texte, detail]) => `
+      <button type="button" class="${q[cle] === valeur ? "choisi" : ""}" onclick="q.${cle} = '${valeur}'; etapeSuivante()">
+        <strong>${texte}</strong>${detail ? `<small>${detail}</small>` : ""}
+      </button>`).join("")}</div>`;
+  }
+
+  // Petits boutons de nombre (0, 1, 2…) : toucher = choisir, on reste sur la question
+  function boutonsNombre(cle, nombres) {
+    return `<div class="nombres">${nombres.map(n => `
+      <button type="button" class="${q[cle] === n ? "choisi" : ""}" onclick="q.${cle} = ${n}; afficherEtape()">${n}</button>`).join("")}</div>`;
+  }
+
+  const ETAPES = {
+    bienvenue: () => ({
+      titre: "Bienvenue 👋",
+      html: `<p>Cette appli prépare ton plan d'entraînement <strong>course à pied + muscu</strong>, semaine par semaine, jusqu'au jour de ta course.</p>
+             <p>Quelques questions rapides, environ 2 minutes. Pas de compte à créer : tes réponses restent sur ton appareil.</p>`,
+      bouton: "Commencer →",
+    }),
+    distance: () => ({
+      titre: "Quelle course prépares-tu ?",
+      html: boutonsChoix("distance", [["5", "5 km"], ["10", "10 km"], ["21.0975", "Semi-marathon"], ["42.195", "Marathon"]]),
+      valider: () => (q.distance ? null : "Choisis une distance."),
+    }),
+    chrono: () => ({
+      titre: `Quel chrono vises-tu sur ${NOMS_DISTANCE[q.distance]} ?`,
+      aide: "Format : 25:00 pour 25 minutes, 1:55:00 pour 1 h 55.",
+      html: `<input id="qChrono" value="${echapper(q.chrono)}" placeholder="ex : ${EXEMPLE_CHRONO[q.distance]}" autocomplete="off">`,
+      lire: () => { q.chrono = document.getElementById("qChrono").value.trim(); },
+      valider: () => {
+        const t = lireTemps(q.chrono);
+        if (!t) return `Écris ton chrono, par exemple ${EXEMPLE_CHRONO[q.distance]}.`;
+        const allure = t / Number(q.distance);
+        if (allure < 150 || allure > 600) return "Ce chrono semble étonnant pour cette distance : vérifie-le.";
+        return null;
+      },
+    }),
+    date: () => ({
+      titre: "Quand a lieu ta course ?",
+      aide: modeModif ? "Attention : changer la date fait redémarrer le plan à partir de cette semaine." : "",
+      html: `<input id="qDate" type="date" value="${q.date}" min="${cleSeance(new Date(), 0).slice(0, 10)}">`,
+      lire: () => { q.date = document.getElementById("qDate").value; },
+      valider: () => {
+        if (!q.date) return "Choisis la date de ta course.";
+        const aujourdhui = new Date();
+        aujourdhui.setHours(0, 0, 0, 0);
+        if (new Date(q.date + "T00:00:00") <= aujourdhui) return "La date doit être dans le futur.";
+        return null;
+      },
+    }),
+    chronos: () => ({
+      titre: "As-tu des chronos récents ?",
+      aide: "Sur les 3 derniers mois. Ils servent à calculer tes allures. C'est optionnel.",
+      html: `
+        <label for="qC5">5 km</label><input id="qC5" value="${echapper(q.c5)}" placeholder="ex : 24:30" autocomplete="off">
+        <label for="qC10" style="margin-top:12px">10 km</label><input id="qC10" value="${echapper(q.c10)}" placeholder="ex : 51:00" autocomplete="off">
+        <button type="button" class="secondaire large" onclick="jeNeSaisPas()">🤷 Je ne sais pas</button>`,
+      lire: () => {
+        q.c5 = document.getElementById("qC5").value.trim();
+        q.c10 = document.getElementById("qC10").value.trim();
+      },
+      valider: () => ([q.c5, q.c10].some(c => c && !lireTemps(c)) ? "Format attendu : 24:30. Laisse vide si tu ne sais pas." : null),
+    }),
+    nombre: () => ({
+      titre: "Combien de séances par semaine ?",
+      html: `<p class="sous-q">🏃 Course à pied</p>${boutonsNombre("nbCourse", [2, 3, 4, 5])}
+             <p class="sous-q">🏋️ Muscu</p>${boutonsNombre("nbMuscu", [0, 1, 2, 3, 4])}
+             <p class="aide-q">Total : ${q.nbCourse + q.nbMuscu} séances par semaine.</p>`,
+      valider: () => (q.nbCourse + q.nbMuscu > 6 ? "Garde au moins 1 jour de repos par semaine (6 séances maximum)." : null),
+      apres: () => {
+        // Nouvelle proposition de jours si les nombres ont changé
+        const ok = q.jours && q.jours.filter(j => j === "course").length === q.nbCourse && q.jours.filter(j => j === "muscu").length === q.nbMuscu;
+        if (!ok) q.jours = joursSuggeres(q.nbCourse, q.nbMuscu);
+      },
+    }),
+    jours: () => {
+      const nbC = q.jours.filter(j => j === "course").length, nbM = q.jours.filter(j => j === "muscu").length;
+      return {
+        titre: "Quels jours ?",
+        aide: "Voici une proposition. Touche un jour pour le changer.",
+        html: JOURS.map((nom, i) => `
+          <div class="jour-q"><span>${nom}</span><div class="segment">${["repos", "course", "muscu"].map(t => `
+            <button type="button" class="${q.jours[i] === t ? "choisi " + t : ""}" onclick="q.jours[${i}] = '${t}'; afficherEtape()">${NOMS_TYPE[t]}</button>`).join("")}
+          </div></div>`).join("") + `<p class="aide-q">${nbC} course${nbC > 1 ? "s" : ""} · ${nbM} muscu</p>`,
+        valider: () => {
+          if (nbC < 2) return "Choisis au moins 2 jours de course.";
+          if (!q.jours.includes("repos")) return "Garde au moins 1 jour de repos.";
+          return null;
+        },
+      };
+    },
+    niveau: () => ({
+      titre: "Ton niveau en muscu ?",
+      html: boutonsChoix("niveau", [
+        ["debutant", "Débutant", "Je découvre, ou je reprends après une longue pause"],
+        ["intermediaire", "Intermédiaire", "Je m'entraîne régulièrement depuis plus de 6 mois"],
+        ["avance", "Avancé", "Plusieurs années, je maîtrise les mouvements"],
+      ]),
+      valider: () => (q.niveau ? null : "Choisis ton niveau."),
+    }),
+    fin: () => {
+      const date = new Date(q.date + "T00:00:00");
+      const semaines = Math.round((lundiDe(date) - lundiDe(new Date())) / (7 * 86400000)) + 1;
+      const chronos = [q.c5 && `5 km en ${q.c5}`, q.c10 && `10 km en ${q.c10}`].filter(Boolean).join(", ") || "aucun (allures estimées)";
+      const joursDe = t => q.jours.map((j, i) => (j === t ? JOURS[i].slice(0, 3) : null)).filter(Boolean).join(", ") || "aucun";
+      const avecMuscu = q.jours.includes("muscu");
+      return {
+        titre: modeModif ? "C'est tout bon ✅" : "C'est prêt ! 🎉",
+        html: `<ul class="resume">
+            <li>🎯 <strong>${NOMS_DISTANCE[q.distance]} en ${q.chrono}</strong>, le ${date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })} (${semaines} semaine${semaines > 1 ? "s" : ""})</li>
+            <li>⏱️ Chronos : ${chronos}</li>
+            <li>🏃 Course : ${joursDe("course")}</li>
+            <li>🏋️ Muscu : ${joursDe("muscu")}${avecMuscu ? ` (${NOMS_NIVEAU[q.niveau || "intermediaire"]})` : ""}</li>
+          </ul>
+          ${semaines < 4 ? `<p class="message alerte">⚠️ Moins de 4 semaines avant la course : le plan sera très court, sans vraie progression.</p>` : ""}
+          <p class="aide-q">Tu pourras tout modifier plus tard dans ⚙️ Réglages.</p>`,
+        bouton: modeModif ? "Enregistrer" : "Générer mon plan 🚀",
+      };
+    },
+  };
+
+  function afficherEtape() {
+    const liste = etapes();
+    const nom = liste[etapeQ];
+    const e = ETAPES[nom]();
+    const premiere = etapeQ === (modeModif ? 1 : 0);
+    const boutonGauche = premiere
+      ? (modeModif ? `<button type="button" class="secondaire" onclick="afficherAppli()">Annuler</button>` : "")
+      : `<button type="button" class="secondaire" onclick="etapeQ--; afficherEtape()">← Retour</button>`;
+    document.getElementById("accueil").innerHTML = `
+      ${nom !== "bienvenue" ? `
+        <div class="progression"><div style="width:${Math.round((100 * etapeQ) / (liste.length - 1))}%"></div></div>
+        <p class="etape-num">Étape ${etapeQ} sur ${liste.length - 1}</p>` : ""}
+      <h2 class="question">${e.titre}</h2>
+      ${e.aide ? `<p class="aide-q">${e.aide}</p>` : ""}
+      <div class="contenu-q">${e.html}</div>
+      <p class="erreur" id="erreurQ" hidden></p>
+      <div class="nav-q">${boutonGauche}
+        <button type="button" onclick="etapeSuivante()">${e.bouton || "Suivant →"}</button>
+      </div>`;
+    const champ = document.querySelector("#accueil input");
+    if (champ) champ.addEventListener("keydown", ev => { if (ev.key === "Enter") etapeSuivante(); });
+  }
+
+  function etapeSuivante() {
+    const nom = etapes()[etapeQ];
+    const e = ETAPES[nom]();
+    if (e.lire) e.lire();
+    const erreur = e.valider ? e.valider() : null;
+    if (erreur) {
+      const zone = document.getElementById("erreurQ");
+      zone.textContent = erreur;
+      zone.hidden = false;
+      return;
+    }
+    if (e.apres) e.apres();
+    if (nom === "fin") return terminerQuestionnaire();
+    etapeQ++;
+    afficherEtape();
+  }
+
+  function jeNeSaisPas() {
+    document.getElementById("qC5").value = "";
+    document.getElementById("qC10").value = "";
+    etapeSuivante();
+  }
+
+  // Une organisation de semaine proposée selon le nombre de séances
+  function joursSuggeres(nbCourse, nbMuscu) {
+    const jours = Array(7).fill("repos");
+    const course = { 2: [1, 6], 3: [1, 3, 6], 4: [1, 3, 5, 6], 5: [0, 1, 3, 4, 6] }[nbCourse];
+    course.forEach(i => { jours[i] = "course"; });
+    let reste = nbMuscu;
+    [0, 2, 5, 4, 3, 1, 6].forEach(i => {
+      if (reste > 0 && jours[i] === "repos") { jours[i] = "muscu"; reste--; }
+    });
+    return jours;
+  }
+
+  // Fin du questionnaire : on range les réponses dans les réglages, puis on calcule le plan
+  function terminerQuestionnaire() {
+    const mettre = (id, valeur) => { document.getElementById(id).value = valeur; };
+    const propre = t => (t ? formatChrono(lireTemps(t)) : "");
+    mettre("objDistance", q.distance);
+    mettre("objTemps", propre(q.chrono));
+    mettre("objDate", q.date);
+    mettre("chrono1Dist", "10");
+    mettre("chrono1Temps", propre(q.c10));
+    mettre("chrono2Dist", "5");
+    mettre("chrono2Temps", propre(q.c5));
+    if (!modeModif) mettre("allureZ2", ""); // nouvel utilisateur : zone 2 estimée
+    q.jours.forEach((t, i) => mettre("jour" + i, t));
+    mettre("niveauMuscu", q.niveau || "intermediaire");
+    semaineAffichee = null;
+    afficherAppli();
+  }
+
+  function afficherAppli() {
+    document.getElementById("accueil").hidden = true;
+    document.getElementById("appli").hidden = false;
+    document.getElementById("reglages").open = false;
+    generer();
+    window.scrollTo(0, 0);
+  }
+
+  // "Recommencer à zéro" : efface le profil ET les séances cochées de cet appareil
+  function recommencerAZero() {
+    const ok = confirm("Tout effacer sur cet appareil ?\n\nTon profil, ton plan et toutes tes séances cochées et notes seront supprimés. C'est définitif.");
+    if (!ok) return;
+    try {
+      localStorage.removeItem(CLE_REGLAGES);
+      localStorage.removeItem(CLE_STOCKAGE);
+    } catch (e) { /* stockage bloqué : rien à effacer */ }
+    location.reload();
+  }
 
   // Flèches ◀ ▶ : passe à la semaine précédente ou suivante du plan
   let semaineAffichee = null; // null = la semaine en cours
@@ -1113,9 +1463,20 @@
     generer();
   }
 
-  // Au chargement : on remet tes réglages enregistrés, puis on calcule le plan
+  // Au chargement : on remet les réglages enregistrés sur cet appareil
   const reglages = chargerReglages();
-  generer();
+
+  // Quelqu'un qui utilisait déjà l'appli avant l'écran d'accueil (séances cochées, mais pas de profil
+  // enregistré) : on remet son profil d'origine et la date de début de son plan. Rien n'est perdu.
+  if (!reglages.objTemps && Object.keys(suivi).length > 0) {
+    Object.entries(ANCIEN_PROFIL).forEach(([id, valeur]) => { document.getElementById(id).value = valeur; });
+    reglages.debutPlan = Object.keys(suivi).map(cle => cle.slice(0, 10)).sort()[0];
+    reglages.datePlan = ANCIEN_PROFIL.objDate;
+  }
+
+  // Profil déjà rempli : on va directement au plan. Sinon : écran d'accueil.
+  if (document.getElementById("objTemps").value) afficherAppli();
+  else ouvrirQuestionnaire(false);
 </script>
 </body>
 </html>
