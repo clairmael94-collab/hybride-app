@@ -312,6 +312,37 @@
     .hero-details { margin-top: 12px; padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--sur-accent) 25%, transparent); font-size: 0.85rem; }
     .hero-details summary { cursor: pointer; opacity: 0.9; min-height: 32px; display: flex; align-items: center; }
     .hero-details p { margin: 6px 0 0; opacity: 0.9; }
+
+    /* ---------- Minuteur plein écran ---------- */
+    .bouton-minuteur { margin-top: 12px; min-height: 48px; background: var(--couleur-fond); color: var(--couleur); font-size: 0.95rem; }
+    dialog.minuteur {
+      --min-fond: var(--carte); --min-texte: var(--texte);
+      width: 100%; height: 100%; max-width: 100%; max-height: 100%; margin: 0; border: none; border-radius: 0;
+      padding: calc(16px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom));
+      background: var(--min-fond); color: var(--min-texte);
+      flex-direction: column; transition: background 0.4s;
+    }
+    dialog.minuteur[open] { display: flex; }
+    dialog.minuteur[data-sorte="effort"] { --min-fond: #d9432a; --min-texte: #fff; }
+    dialog.minuteur[data-sorte="recup"]  { --min-fond: #0f8a4a; --min-texte: #fff; }
+    dialog.minuteur[data-sorte="calme"]  { --min-fond: #3d5afe; --min-texte: #fff; }
+    dialog.minuteur[data-sorte="fini"]   { --min-fond: #3d5afe; --min-texte: #fff; }
+    .min-haut { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-weight: 600; }
+    .min-fermer { width: 48px; height: 48px; padding: 0; border-radius: 50%; background: color-mix(in srgb, var(--min-texte) 15%, transparent); color: var(--min-texte); font-size: 1.2rem; }
+    .min-centre { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; }
+    .min-etape { font-size: 1.5rem; font-weight: 700; margin: 0; }
+    .min-temps { font-size: clamp(4.5rem, 26vw, 9rem); font-weight: 700; letter-spacing: -0.04em; line-height: 1; margin: 6px 0; font-variant-numeric: tabular-nums; }
+    .min-info { font-size: 1.15rem; margin: 0; opacity: 0.95; }
+    .min-suite { font-size: 0.95rem; margin: 10px 0 0; opacity: 0.8; }
+    .min-progression { height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--min-texte) 20%, transparent); overflow: hidden; margin: 12px 0 16px; }
+    .min-progression div { height: 100%; width: 0; background: var(--min-texte); border-radius: 999px; transition: width 0.2s linear; }
+    .min-boutons { display: flex; gap: 10px; flex-wrap: wrap; }
+    .min-boutons button { flex: 1 1 140px; min-height: 64px; font-size: 1.1rem; border-radius: 18px; }
+    .min-principal { background: var(--min-texte); color: var(--min-fond); }
+    .min-secondaire { background: color-mix(in srgb, var(--min-texte) 15%, transparent); color: var(--min-texte); }
+    dialog.minuteur[data-sorte="attente"] .min-principal { background: var(--accent); color: var(--sur-accent); }
+    .min-reglage { width: auto; min-height: 44px; padding: 6px 14px; margin: 4px; background: color-mix(in srgb, var(--min-texte) 12%, transparent); color: var(--min-texte); }
+    .min-ecran { font-size: 0.8rem; text-align: center; margin: 12px 0 0; opacity: 0.8; }
   </style>
 </head>
 <body>
@@ -417,6 +448,23 @@
         <button type="submit" style="margin-top:20px">Enregistrer et recalculer</button>
       </form>
     </details>
+
+    <!-- Minuteur plein écran -->
+    <dialog id="minuteur" class="minuteur" aria-label="Minuteur">
+      <div class="min-haut">
+        <span id="minTitre"></span>
+        <button type="button" class="min-fermer" onclick="arreterMinuteur()" aria-label="Arrêter le minuteur">✕</button>
+      </div>
+      <div class="min-centre">
+        <p id="minEtape" class="min-etape"></p>
+        <p id="minTemps" class="min-temps chiffre"></p>
+        <p id="minInfo" class="min-info"></p>
+        <p id="minSuite" class="min-suite"></p>
+      </div>
+      <div class="min-progression"><div id="minBarre"></div></div>
+      <div id="minBoutons" class="min-boutons"></div>
+      <p id="minEcran" class="min-ecran"></p>
+    </dialog>
 
     <!-- Avis des testeurs -->
     <p class="lien-avis" id="lienAvis" hidden><button type="button" onclick="ouvrirAvis()">💬 Donner mon avis</button></p>
@@ -1014,6 +1062,7 @@
       message = `Objectif nettement plus rapide que ton niveau estimé (${formatDuree(estimation)}). Il serait prudent de viser un chrono intermédiaire.`;
     }
 
+    dernieresAllures = allures;
     afficherHero({ dateCourse, distanceObjectif, tempsObjectif, prediction, regularite });
     afficherResultats({ semaineActuelle, allures, estimation: sansChrono ? null : estimation, semainesRestantes, semaine, avertissements, message, distanceObjectif, plan, debutSemaine, alertes, chrono });
   }
@@ -1334,6 +1383,7 @@
             ${d.allure ? `<span class="allure">🎯 ${d.allure}</span>` : ""}
             ${d.km ? `<span class="distance">≈ ${formatKm(d.km)}</span>` : ""}
           </div>` : ""}
+          ${boutonMinuteur(jour, s0, cle)}
           ${zoneNote}
         </article>`;
     });
@@ -1741,6 +1791,313 @@
       localStorage.removeItem(CLE_STOCKAGE);
     } catch (e) { /* stockage bloqué : rien à effacer */ }
     location.reload();
+  }
+
+  /* ---------- Minuteur : fractionné (étapes automatiques) et repos de muscu ---------- */
+  let dernieresAllures = null; // allures du dernier calcul, pour les durées des répétitions
+  let minuteur = null;         // le minuteur en cours (null = aucun)
+  let audio = null;            // pour les bips
+  let verrouEcran = null;      // empêche la mise en veille
+
+  function boutonMinuteur(jour, semaine, cle) {
+    if (jour.seance === "fractionne" || jour.seance === "rappelCourt") {
+      const type = jour.seance === "rappelCourt" ? "rappelCourt" : semaine.fractionne;
+      return `<button type="button" class="bouton-minuteur" onclick="lancerFractionne('${type}', '${cle}')">⏱️ Lancer le minuteur</button>`;
+    }
+    if (MUSCU[jour.seance]) {
+      return `<button type="button" class="bouton-minuteur" onclick="lancerRepos('${cle}')">⏱️ Minuteur de repos</button>`;
+    }
+    return "";
+  }
+
+  // Les étapes d'un fractionné, avec leur durée en secondes.
+  // Pour une distance (ex : 800 m), la durée est estimée d'après l'allure cible.
+  function etapesFractionne(type, al) {
+    const etapes = [];
+    const footing = `Footing ${formatAllure(al.footingMin)}–${formatAllure(al.footingMax)} /km`;
+    const ajouter = (nom, secondes, sorte, info) => etapes.push({ nom, secondes: Math.round(secondes), sorte, info });
+    const distance = (km, allure) => ({ secondes: km * allure, info: `${km >= 1 ? km + " km" : Math.round(km * 1000) + " m"} à ${formatAllure(allure)} /km` });
+    const repetitions = (nombre, effort, recup) => {
+      for (let k = 1; k <= nombre; k++) {
+        const e = typeof effort === "function" ? effort(k) : effort;
+        ajouter(`Répétition ${k}/${nombre}`, e.secondes, "effort", e.info);
+        if (k < nombre) ajouter("Récupération", typeof recup === "function" ? recup(k) : recup, "recup", "En trottinant");
+      }
+    };
+    const pyramide = [0.4, 0.8, 1.2, 0.8, 0.4];
+    switch (type) {
+      case "800":
+        ajouter("Échauffement", 900, "calme", footing);
+        repetitions(6, distance(0.8, al.vma5k), 120);
+        ajouter("Retour au calme", 600, "calme", footing);
+        break;
+      case "400":
+        ajouter("Échauffement", 900, "calme", footing);
+        repetitions(10, distance(0.4, al.vitesse3k), 90);
+        ajouter("Retour au calme", 600, "calme", footing);
+        break;
+      case "seuil":
+        ajouter("Échauffement", 900, "calme", footing);
+        repetitions(3, { secondes: 480, info: `Allure seuil ${formatAllure(al.seuil)} /km` }, 120);
+        ajouter("Retour au calme", 600, "calme", footing);
+        break;
+      case "pyramide":
+        ajouter("Échauffement", 900, "calme", footing);
+        repetitions(5, k => distance(pyramide[k - 1], al.vma5k), k => (pyramide[k - 1] * al.vma5k) / 2);
+        ajouter("Retour au calme", 600, "calme", footing);
+        break;
+      case "specifique":
+        ajouter("Échauffement", 900, "calme", footing);
+        repetitions(3, distance(2, al.objectif), 150);
+        ajouter("Retour au calme", 600, "calme", footing);
+        break;
+      case "cotes":
+        ajouter("Échauffement", 1200, "calme", footing);
+        repetitions(10, { secondes: 45, info: "En montée, effort soutenu mais contrôlé" }, 90);
+        ajouter("Retour au calme", 600, "calme", footing);
+        break;
+      case "fartlek":
+        ajouter("Footing", 870, "calme", footing);
+        repetitions(8, { secondes: 60, info: "Un peu plus vite, sans forcer" }, 60);
+        ajouter("Footing", 930, "calme", footing);
+        break;
+      case "rappel":
+        ajouter("Échauffement", 900, "calme", footing);
+        repetitions(4, distance(1, al.objectif), 120);
+        ajouter("Retour au calme", 600, "calme", footing);
+        break;
+      case "rappelCourt":
+        ajouter("Footing", 600, "calme", footing);
+        repetitions(3, distance(1, al.objectif), 120);
+        ajouter("Footing", 300, "calme", footing);
+        break;
+    }
+    return etapes;
+  }
+
+  // --- Son, vibration, écran allumé ---
+  function preparerSon() {
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      audio.resume();
+    } catch (e) { audio = null; }
+  }
+  function bip(frequence, duree, fois = 1) {
+    if (!audio) return;
+    for (let k = 0; k < fois; k++) {
+      const osc = audio.createOscillator(), volume = audio.createGain();
+      const debut = audio.currentTime + k * (duree + 0.08);
+      osc.frequency.value = frequence;
+      volume.gain.setValueAtTime(0.0001, debut);
+      volume.gain.exponentialRampToValueAtTime(0.5, debut + 0.01);
+      volume.gain.exponentialRampToValueAtTime(0.0001, debut + duree);
+      osc.connect(volume).connect(audio.destination);
+      osc.start(debut);
+      osc.stop(debut + duree + 0.02);
+    }
+  }
+  // Signal de changement d'étape : 2 bips aigus pour un effort, 1 bip grave sinon
+  function signal(sorte) {
+    if (sorte === "effort") bip(990, 0.22, 2); else bip(660, 0.35);
+    if (navigator.vibrate) navigator.vibrate(sorte === "effort" ? [300, 120, 300] : [450]);
+  }
+  async function garderEcranAllume() {
+    const info = document.getElementById("minEcran");
+    try {
+      if (!("wakeLock" in navigator)) throw new Error("non disponible");
+      verrouEcran = await navigator.wakeLock.request("screen");
+      info.textContent = "🔆 L'écran reste allumé pendant le minuteur.";
+    } catch (e) {
+      verrouEcran = null;
+      info.textContent = "⚠️ Ton navigateur ne peut pas empêcher la mise en veille : désactive-la dans les réglages du téléphone si besoin.";
+    }
+  }
+  function libererEcran() {
+    if (verrouEcran) verrouEcran.release().catch(() => {});
+    verrouEcran = null;
+  }
+  // Le verrou saute quand on quitte l'appli : on le redemande au retour
+  document.addEventListener("visibilitychange", () => {
+    if (minuteur && document.visibilityState === "visible") garderEcranAllume();
+  });
+
+  // --- Ouvrir / fermer ---
+  function ouvrirMinuteur(etat) {
+    minuteur = etat;
+    preparerSon();
+    garderEcranAllume();
+    document.getElementById("minuteur").showModal();
+    clearInterval(boucleMinuteur);
+    boucleMinuteur = setInterval(tic, 200);
+    dessinerMinuteur();
+  }
+  let boucleMinuteur = null;
+
+  function arreterMinuteur() {
+    if (minuteur && minuteur.mode === "fractionne" && !minuteur.fini && !confirm("Arrêter le minuteur ?")) return;
+    clearInterval(boucleMinuteur);
+    minuteur = null;
+    libererEcran();
+    document.getElementById("minuteur").close();
+  }
+  document.getElementById("minuteur").addEventListener("cancel", e => { e.preventDefault(); arreterMinuteur(); });
+
+  function lancerFractionne(type, cle) {
+    const etapes = etapesFractionne(type, dernieresAllures);
+    ouvrirMinuteur({
+      mode: "fractionne", titre: seanceFractionne(type, dernieresAllures).titre, cle,
+      etapes, index: -1, fin: null, pause: false, restePause: 0, fini: false,
+    });
+  }
+
+  function lancerRepos(cle) {
+    ouvrirMinuteur({ mode: "repos", titre: "Repos entre les séries", cle, duree: Number(reglages.repos) || 90, series: 0, fin: null });
+  }
+
+  // --- Fractionné : démarrer, pause, étape suivante ---
+  function etapeSuivanteMinuteur() {
+    const m = minuteur;
+    m.index++;
+    if (m.index >= m.etapes.length) {
+      m.fini = true;
+      m.fin = null;
+      bip(880, 0.15, 3);
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+    } else {
+      const e = m.etapes[m.index];
+      m.fin = Date.now() + e.secondes * 1000;
+      m.pause = false;
+      signal(e.sorte);
+    }
+    m.dernierReste = null;
+    dessinerMinuteur();
+  }
+  function pauseMinuteur() {
+    const m = minuteur;
+    if (m.pause) { m.fin = Date.now() + m.restePause; m.pause = false; }
+    else { m.restePause = m.fin - Date.now(); m.pause = true; }
+    dessinerMinuteur();
+  }
+
+  // --- Repos de muscu ---
+  function changerRepos(ecart) {
+    minuteur.duree = Math.min(600, Math.max(15, minuteur.duree + ecart));
+    reglages.repos = minuteur.duree;
+    sauverReglages();
+    dessinerMinuteur();
+  }
+  function demarrerRepos() {
+    minuteur.series++;
+    minuteur.fin = Date.now() + minuteur.duree * 1000;
+    minuteur.dernierReste = null;
+    bip(660, 0.15);
+    dessinerMinuteur();
+  }
+
+  // Toutes les 0,2 s : on met à jour le temps restant (calculé avec l'heure, donc précis)
+  function tic() {
+    const m = minuteur;
+    if (!m || !m.fin || m.pause) return;
+    const reste = Math.ceil((m.fin - Date.now()) / 1000);
+    if (reste !== m.dernierReste && reste >= 1 && reste <= 3) bip(520, 0.08); // 3, 2, 1…
+    m.dernierReste = reste;
+    if (reste <= 0) {
+      if (m.mode === "fractionne") return etapeSuivanteMinuteur();
+      m.fin = null; // repos terminé
+      signal("effort");
+      dessinerMinuteur();
+      return;
+    }
+    afficherTemps(reste);
+  }
+
+  const mmss = secondes => `${Math.floor(secondes / 60)}:${String(secondes % 60).padStart(2, "0")}`;
+
+  function afficherTemps(reste) {
+    document.getElementById("minTemps").textContent = mmss(reste);
+    const m = minuteur;
+    if (m.mode === "fractionne" && m.index >= 0 && !m.fini) {
+      const totalEtape = m.etapes[m.index].secondes;
+      document.getElementById("minBarre").style.width = `${100 * (1 - reste / totalEtape)}%`;
+    } else if (m.mode === "repos" && m.fin) {
+      document.getElementById("minBarre").style.width = `${100 * (1 - reste / m.duree)}%`;
+    }
+  }
+
+  // Redessine tout l'écran du minuteur (à chaque changement d'état)
+  function dessinerMinuteur() {
+    const m = minuteur;
+    const ecran = document.getElementById("minuteur");
+    const champ = id => document.getElementById(id);
+    champ("minTitre").textContent = m.titre;
+    let boutons = "";
+
+    if (m.mode === "fractionne") {
+      if (m.fini) {
+        ecran.dataset.sorte = "fini";
+        champ("minEtape").textContent = "Séance terminée 🎉";
+        champ("minTemps").textContent = "Bravo !";
+        champ("minInfo").textContent = "Pense à t'hydrater et à bien récupérer.";
+        champ("minSuite").textContent = "";
+        champ("minBarre").style.width = "100%";
+        const dejaFaite = suivi[m.cle]?.fait;
+        boutons = (dejaFaite ? "" : `<button type="button" class="min-principal" onclick="marquerFaiteDepuisMinuteur()">✅ Marquer la séance comme faite</button>`)
+          + `<button type="button" class="min-secondaire" onclick="arreterMinuteur()">Fermer</button>`;
+      } else if (m.index < 0) {
+        ecran.dataset.sorte = "attente";
+        const total = m.etapes.reduce((t, e) => t + e.secondes, 0);
+        champ("minEtape").textContent = `${m.etapes.length} étapes · environ ${Math.round(total / 60)} min`;
+        champ("minTemps").textContent = "Prêt ?";
+        champ("minInfo").textContent = "Le minuteur enchaîne tout seul. Bip et vibration à chaque changement.";
+        champ("minSuite").textContent = `Pour commencer : ${m.etapes[0].nom.toLowerCase()} (${mmss(m.etapes[0].secondes)})`;
+        champ("minBarre").style.width = "0%";
+        boutons = `<button type="button" class="min-principal" onclick="etapeSuivanteMinuteur()">▶ Démarrer</button>`;
+      } else {
+        const e = m.etapes[m.index];
+        const suivante = m.etapes[m.index + 1];
+        ecran.dataset.sorte = e.sorte;
+        champ("minEtape").textContent = e.nom;
+        champ("minInfo").textContent = e.info;
+        champ("minSuite").textContent = suivante ? `Ensuite : ${suivante.nom.toLowerCase()} (${mmss(suivante.secondes)})` : "Dernière étape !";
+        boutons = `
+          <button type="button" class="min-secondaire" onclick="pauseMinuteur()">${m.pause ? "▶ Reprendre" : "⏸ Pause"}</button>
+          <button type="button" class="min-principal" onclick="etapeSuivanteMinuteur()">⏭ Suivant</button>`;
+        afficherTemps(Math.max(0, Math.ceil(((m.pause ? Date.now() + m.restePause : m.fin) - Date.now()) / 1000)));
+      }
+    } else {
+      // Repos de muscu
+      if (m.fin) {
+        ecran.dataset.sorte = "recup";
+        champ("minEtape").textContent = `Repos après la série ${m.series}`;
+        champ("minInfo").textContent = "Respire, bois un peu d'eau.";
+        champ("minSuite").textContent = "";
+        boutons = `<button type="button" class="min-principal" onclick="minuteur.fin = null; dessinerMinuteur()">⏭ Passer le repos</button>`;
+        afficherTemps(Math.max(0, Math.ceil((m.fin - Date.now()) / 1000)));
+      } else {
+        ecran.dataset.sorte = m.series ? "effort" : "attente";
+        champ("minEtape").textContent = m.series ? `À toi : série ${m.series + 1}` : "Fais ta première série";
+        champ("minTemps").textContent = mmss(m.duree);
+        champ("minInfo").innerHTML = `Temps de repos : <button type="button" class="min-reglage" onclick="changerRepos(-15)" aria-label="15 secondes de moins">−15 s</button> <button type="button" class="min-reglage" onclick="changerRepos(15)" aria-label="15 secondes de plus">+15 s</button>`;
+        champ("minSuite").textContent = `Séries faites : ${m.series}`;
+        champ("minBarre").style.width = "0%";
+        boutons = `
+          <button type="button" class="min-principal" onclick="demarrerRepos()">✔ Série terminée → repos</button>
+          <button type="button" class="min-secondaire" onclick="${suivi[m.cle]?.fait ? "arreterMinuteur()" : "marquerFaiteDepuisMinuteur()"}">${suivi[m.cle]?.fait ? "Fermer" : "Séance finie ✅"}</button>`;
+      }
+    }
+    champ("minBoutons").innerHTML = boutons;
+  }
+
+  // Coche la séance (comme la case de la carte), puis ferme le minuteur
+  function marquerFaiteDepuisMinuteur() {
+    const cle = minuteur.cle;
+    minuteur.fini = true;
+    arreterMinuteur();
+    const caseACocher = document.querySelector(`#seance-${cle} .coche input`);
+    if (caseACocher && !caseACocher.checked) {
+      caseACocher.checked = true;
+      cocher(cle, caseACocher);
+    }
   }
 
   /* ---------- "Donner mon avis" (envoyé par e-mail grâce à Web3Forms, sans serveur) ---------- */
