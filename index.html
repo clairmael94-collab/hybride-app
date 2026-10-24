@@ -63,6 +63,7 @@
 
     /* ---------- Base ---------- */
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; } /* un élément caché reste caché, même avec display: flex */
     html { -webkit-text-size-adjust: 100%; }
     body {
       margin: 0;
@@ -359,12 +360,58 @@
     .serie input { text-align: center; padding: 10px 6px; font-variant-numeric: tabular-nums; }
     .case-carnet { display: flex; align-items: center; gap: 10px; margin: 14px 0 0; color: var(--texte); font-weight: 600; }
     .case-carnet input { width: 22px; height: 22px; min-height: 0; accent-color: var(--succes); }
+
+    /* ---------- Onglets Plan / Stats ---------- */
+    .onglets { display: flex; gap: 4px; background: var(--carte-2); padding: 4px; border-radius: 14px; margin-bottom: 14px; }
+    .onglets button { flex: 1; min-height: 44px; background: transparent; color: var(--texte-doux); }
+    .onglets button.choisi { background: var(--carte); color: var(--texte); box-shadow: var(--ombre); }
+
+    /* ---------- Page Stats ---------- */
+    .serie { display: flex; align-items: center; gap: 14px; }
+    .serie-chiffre { font-size: 2.6rem; font-weight: 700; line-height: 1; white-space: nowrap; flex-shrink: 0; }
+    .serie strong { display: block; }
+    .serie .serie-chiffre strong { display: inline; }
+    .serie small { color: var(--texte-doux); font-size: 0.85rem; }
+    .sous-titre-graph { margin: -6px 0 10px; font-size: 0.85rem; color: var(--texte-doux); }
+    .legende-graph { display: flex; gap: 14px; font-size: 0.82rem; color: var(--texte-doux); margin-bottom: 4px; }
+    .legende-graph span { display: inline-flex; align-items: center; gap: 6px; }
+    .cle { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+    .cle.plein.course { background: var(--course); }
+    .cle.fantome.course { background: var(--course-fond); }
+    .lecture { min-height: 1.4em; margin: 4px 0 2px; font-size: 0.9rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .graphique { width: 100%; height: auto; display: block; overflow: visible; }
+    .graphique .grille { stroke: var(--bordure); stroke-width: 1; }
+    .graphique .axe { fill: var(--texte-doux); font-size: 11px; font-family: inherit; }
+    .graphique .cible { fill: transparent; cursor: pointer; }
+    .graphique .colonne:focus { outline: none; }
+    .graphique .colonne:focus-visible .cible, .graphique .colonne.active .cible { fill: var(--carte-2); }
+    .graphique .plein.course { fill: var(--course); }
+    .graphique .fantome.course { fill: var(--course-fond); }
+    .graphique .plein.muscu { fill: var(--muscu); }
+    .vue-tableau { margin-top: 10px; font-size: 0.88rem; }
+    .vue-tableau summary { cursor: pointer; color: var(--texte-doux); min-height: 36px; display: flex; align-items: center; }
+    .vue-tableau table { width: 100%; border-collapse: collapse; margin-top: 6px; font-variant-numeric: tabular-nums; }
+    .vue-tableau th, .vue-tableau td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--bordure); }
+    .vue-tableau th { color: var(--texte-doux); font-weight: 600; }
+    .records { list-style: none; padding: 0; margin: 0; }
+    .records li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--bordure); }
+    .records li:last-child { border-bottom: none; }
+    .records li > span:first-child { font-weight: 600; }
+    .valeur-record { text-align: right; }
+    .valeur-record strong { display: block; font-size: 1.15rem; }
+    .valeur-record small { color: var(--texte-doux); font-size: 0.8rem; }
+    .vide { color: var(--texte-doux); font-size: 0.9rem; margin: 0; }
   </style>
+
 </head>
 <body>
 <main>
   <h1>Ma semaine hybride</h1>
   <p class="sous-titre">Course à pied + muscu, organisées pour ne pas se gêner.</p>
+  <div class="onglets" id="onglets" role="tablist" hidden>
+    <button type="button" role="tab" data-page="plan" onclick="afficherPage('plan')">Plan</button>
+    <button type="button" role="tab" data-page="stats" onclick="afficherPage('stats')">Stats</button>
+  </div>
   <div id="hero" class="carte hero" hidden></div>
   <div id="compteur" class="carte compteur" hidden></div>
 
@@ -375,6 +422,7 @@
   <section id="appli" hidden>
     <p class="erreur" id="erreur" hidden></p>
     <section id="resultats"></section>
+    <section id="pageStats" hidden></section>
     <nav class="barre-bas" id="barreBas" aria-label="Changer de semaine"></nav>
 
     <!-- Réglages -->
@@ -1087,7 +1135,9 @@
     dernieresAllures = allures;
     dernierPlan = plan;
     afficherHero({ dateCourse, distanceObjectif, tempsObjectif, prediction, regularite });
+    dernierDebutPlan = debutPlan;
     afficherResultats({ semaineActuelle, allures, estimation: sansChrono ? null : estimation, semainesRestantes, semaine, avertissements, message, distanceObjectif, plan, debutSemaine, alertes, chrono });
+    appliquerPage();
   }
 
   function lundiDeLaSemaine(debutPlan, numero) {
@@ -1299,6 +1349,7 @@
   }
 
   function afficherErreur(texte) {
+    appliquerPage();
     const erreur = document.getElementById("erreur");
     erreur.textContent = texte;
     erreur.hidden = false;
@@ -1588,6 +1639,7 @@
     document.getElementById("appli").hidden = true;
     document.getElementById("compteur").hidden = true;
     document.getElementById("hero").hidden = true;
+    document.getElementById("onglets").hidden = true;
     document.getElementById("accueil").hidden = false;
     afficherEtape();
     window.scrollTo(0, 0);
@@ -1799,6 +1851,8 @@
   }
 
   function afficherAppli() {
+    pageActuelle = "plan";
+    document.getElementById("onglets").hidden = false;
     document.getElementById("accueil").hidden = true;
     document.getElementById("appli").hidden = false;
     document.getElementById("reglages").open = false;
@@ -1816,6 +1870,237 @@
       localStorage.removeItem(CLE_CARNET);
     } catch (e) { /* stockage bloqué : rien à effacer */ }
     location.reload();
+  }
+
+  /* ---------- Page "Stats" ---------- */
+  let pageActuelle = "plan";
+  let dernierDebutPlan = null;
+
+  function afficherPage(page) {
+    pageActuelle = page;
+    if (page === "plan") generer(); else appliquerPage();
+    window.scrollTo(0, 0);
+  }
+
+  // Montre la page Plan ou la page Stats
+  function appliquerPage() {
+    const stats = pageActuelle === "stats";
+    if (stats) ["hero", "compteur", "resultats", "barreBas"].forEach(id => { document.getElementById(id).hidden = true; });
+    else ["resultats", "barreBas"].forEach(id => { document.getElementById(id).hidden = false; });
+    document.getElementById("pageStats").hidden = !stats;
+    document.querySelectorAll("#onglets button").forEach(b => {
+      b.classList.toggle("choisi", b.dataset.page === pageActuelle);
+      b.setAttribute("aria-selected", b.dataset.page === pageActuelle);
+    });
+    if (stats && dernierPlan) afficherStats();
+  }
+
+  // Les semaines déjà commencées, avec leurs chiffres
+  function semainesPassees() {
+    const aujourdhui = new Date();
+    aujourdhui.setHours(0, 0, 0, 0);
+    return dernierPlan
+      .map(semaine => ({ semaine, lundi: lundiDeLaSemaine(dernierDebutPlan, semaine.numero) }))
+      .filter(x => x.lundi <= aujourdhui)
+      .map(({ semaine, lundi }) => {
+        const dimanche = new Date(lundi);
+        dimanche.setDate(dimanche.getDate() + 6);
+        let kmFaits = 0, prevues = 0, faites = 0;
+        semaine.jours.forEach((jour, i) => {
+          const fait = suivi[cleSeance(lundi, i)]?.fait;
+          if (jour.type !== "repos" && jour.seance && jour.seance !== "apresCourse") { prevues++; if (fait) faites++; }
+          if (jour.type === "course" && fait) kmFaits += jour.km;
+        });
+        // Volume de muscu = somme de (répétitions × poids) notées dans le carnet cette semaine
+        const debut = cleSeance(lundi, 0).slice(0, 10), fin = cleSeance(dimanche, 0).slice(0, 10);
+        let volume = 0;
+        Object.values(carnet).forEach(entrees => entrees.forEach(e => {
+          if (e.date >= debut && e.date <= fin) e.series.forEach(x => { volume += x.reps * x.poids; });
+        }));
+        return { numero: semaine.numero, lundi, terminee: dimanche < aujourdhui, kmPrevus: semaine.km, kmFaits, prevues, faites, volume };
+      });
+  }
+
+  // Série de semaines complètes d'affilée (toutes les séances cochées).
+  // La semaine en cours ne casse pas la série tant qu'elle n'est pas finie.
+  function calculerSerie(semaines) {
+    let actuelle = 0, record = 0;
+    semaines.forEach(s => {
+      const complete = s.prevues > 0 && s.faites === s.prevues;
+      if (complete) { actuelle++; record = Math.max(record, actuelle); }
+      else if (s.terminee) actuelle = 0;
+    });
+    return { actuelle, record };
+  }
+
+  // Records en course : chronos de référence + chronos notés dans les séances
+  function recordsCourse() {
+    const sources = [];
+    [1, 2].forEach(n => {
+      const temps = lireTemps(document.getElementById(`chrono${n}Temps`).value);
+      if (temps) sources.push({ distance: Number(document.getElementById(`chrono${n}Dist`).value), temps, quand: "chrono de référence" });
+    });
+    Object.entries(suivi).forEach(([cle, s]) => {
+      const c = chronoDansNote(s.note);
+      if (c && c.temps) sources.push({ ...c, quand: new Date(dateDeCle(cle) + "T00:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) });
+    });
+    return [[5, "5 km"], [10, "10 km"], [21.0975, "Semi-marathon"], [42.195, "Marathon"]]
+      .map(([distance, nom]) => {
+        const meilleurs = sources.filter(x => Math.abs(x.distance - distance) < 0.15).sort((a, b) => a.temps - b.temps);
+        return { distance, nom, record: meilleurs[0] || null };
+      })
+      .filter(r => r.distance < 42 || r.record); // le marathon seulement s'il y a un chrono
+  }
+
+  // Charge max par exercice (carnet de muscu)
+  function recordsMuscu() {
+    return Object.entries(carnet)
+      .map(([nom, entrees]) => {
+        let meilleur = null;
+        entrees.forEach(e => e.series.forEach(x => {
+          const mieux = !meilleur || x.poids > meilleur.poids || (x.poids === meilleur.poids && x.reps > meilleur.reps);
+          if (mieux) meilleur = { poids: x.poids, reps: x.reps, date: e.date };
+        }));
+        return { nom, meilleur };
+      })
+      .filter(r => r.meilleur)
+      .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+  }
+
+  // Graduations "rondes" pour l'axe vertical (0, 10, 20, 30…)
+  function graduations(max) {
+    if (max <= 0) return [0, 1];
+    const brut = max / 3;
+    const puissance = Math.pow(10, Math.floor(Math.log10(brut)));
+    const pas = [1, 2, 2.5, 5, 10].map(p => p * puissance).find(p => p >= brut);
+    const ticks = [];
+    for (let v = 0; v <= max + pas * 0.001; v += pas) ticks.push(v);
+    if (ticks[ticks.length - 1] < max) ticks.push(ticks[ticks.length - 1] + pas);
+    return ticks;
+  }
+
+  // Graphique en colonnes (SVG). "fantome" = valeur prévue, dessinée derrière en plus clair.
+  // Toucher ou survoler une colonne affiche sa valeur au-dessus du graphique.
+  function graphiqueColonnes({ id, points, classe, format }) {
+    const L = 340, H = 170, gauche = 34, droite = 6, haut = 8, bas = 22;
+    const max = Math.max(...points.map(p => Math.max(p.valeur, p.fantome || 0)));
+    const ticks = graduations(max);
+    const haute = ticks[ticks.length - 1] || 1;
+    const bande = (L - gauche - droite) / points.length;
+    const largeur = Math.min(24, bande - 2); // 2 px d'air entre les colonnes
+    const y = v => haut + (H - haut - bas) * (1 - v / haute);
+    const colonne = (x, v, cls) => {
+      if (v <= 0) return "";
+      const sommet = y(v), base = y(0), r = Math.min(4, largeur / 2, base - sommet);
+      return `<path class="${cls}" d="M${x},${base} V${sommet + r} Q${x},${sommet} ${x + r},${sommet} H${x + largeur - r} Q${x + largeur},${sommet} ${x + largeur},${sommet + r} V${base} Z"/>`;
+    };
+    const etiquettesX = new Set([0, points.length - 1, Math.floor((points.length - 1) / 2)]);
+    let svg = ticks.map(t => `
+      <line class="grille" x1="${gauche}" x2="${L - droite}" y1="${y(t)}" y2="${y(t)}"/>
+      <text class="axe" x="${gauche - 6}" y="${y(t) + 4}" text-anchor="end">${format(t, true)}</text>`).join("");
+    points.forEach((p, k) => {
+      const x = gauche + k * bande + (bande - largeur) / 2;
+      svg += `<g class="colonne" tabindex="0" data-k="${k}">
+        <rect class="cible" x="${gauche + k * bande}" y="${haut}" width="${bande}" height="${H - haut - bas}"/>
+        ${p.fantome ? colonne(x, p.fantome, "fantome " + classe) : ""}
+        ${colonne(x, p.valeur, "plein " + classe)}
+      </g>`;
+      if (etiquettesX.has(k)) svg += `<text class="axe" x="${x + largeur / 2}" y="${H - 6}" text-anchor="middle">${p.court}</text>`;
+    });
+    return `
+      <p class="lecture" id="lecture-${id}" aria-live="polite"></p>
+      <svg class="graphique" id="${id}" viewBox="0 0 ${L} ${H}" aria-hidden="true">${svg}</svg>`;
+  }
+
+  // Affiche la valeur d'une colonne au toucher / survol / clavier
+  function brancherGraphique(id, points, lecture) {
+    const zone = document.getElementById("lecture-" + id);
+    const montrer = k => {
+      zone.textContent = `${points[k].nom} : ${lecture(points[k])}`;
+      document.querySelectorAll(`#${id} .colonne`).forEach(g => g.classList.toggle("active", Number(g.dataset.k) === k));
+    };
+    document.querySelectorAll(`#${id} .colonne`).forEach(g => {
+      const k = Number(g.dataset.k);
+      g.addEventListener("pointerenter", () => montrer(k));
+      g.addEventListener("click", () => montrer(k));
+      g.addEventListener("focus", () => montrer(k));
+    });
+    montrer(points.length - 1); // par défaut : la semaine la plus récente
+  }
+
+  function tableau(entetes, lignes) {
+    return `<details class="vue-tableau"><summary>Voir en tableau</summary>
+      <table><thead><tr>${entetes.map(e => `<th>${e}</th>`).join("")}</tr></thead>
+      <tbody>${lignes.map(l => `<tr>${l.map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></details>`;
+  }
+
+  function afficherStats() {
+    const semaines = semainesPassees();
+    const serie = calculerSerie(semaines);
+    const dateCourte = d => d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+    const kg = (v, axe) => (axe && v >= 1000 ? (v / 1000).toLocaleString("fr-FR", { maximumFractionDigits: 1 }) + " t" : Math.round(v).toLocaleString("fr-FR") + " kg");
+
+    const pointsKm = semaines.map(s => ({ nom: `Semaine ${s.numero} (${dateCourte(s.lundi)})`, court: `S${s.numero}`, valeur: s.kmFaits, fantome: s.kmPrevus }));
+    const lectureKm = p => `${formatKm(p.valeur)} faits sur ${formatKm(p.fantome)} prévus`;
+    const pointsMuscu = semaines.map(s => ({ nom: `Semaine ${s.numero} (${dateCourte(s.lundi)})`, court: `S${s.numero}`, valeur: s.volume }));
+    const lectureMuscu = p => (p.valeur ? `${kg(p.valeur)} soulevés` : "rien de noté");
+    const totalKm = semaines.reduce((t, s) => t + s.kmFaits, 0);
+    const aDuVolume = semaines.some(s => s.volume > 0);
+    const course = recordsCourse();
+    const muscu = recordsMuscu();
+    const exemple = r => (r.distance >= 21 ? "semi en 1:45:00" : `${r.distance} km en ${r.distance === 5 ? "24:00" : "50:00"}`);
+
+    document.getElementById("pageStats").innerHTML = `
+      <div class="carte serie">
+        <div class="serie-chiffre"><span aria-hidden="true">🔥</span> <strong class="chiffre">${serie.actuelle}</strong></div>
+        <div>
+          <strong>${serie.actuelle > 1 ? "semaines complètes d'affilée" : "semaine complète d'affilée"}</strong>
+          <small>Record : ${serie.record} · une semaine est complète quand toutes ses séances sont cochées.</small>
+        </div>
+      </div>
+
+      <div class="carte">
+        <h2>Kilomètres par semaine</h2>
+        <p class="sous-titre-graph">${formatKm(totalKm)} courus depuis le début du plan (estimés d'après les séances cochées)</p>
+        <div class="legende-graph"><span><i class="cle plein course"></i>Faits</span><span><i class="cle fantome course"></i>Prévus</span></div>
+        ${graphiqueColonnes({ id: "grKm", points: pointsKm, classe: "course", format: v => String(Math.round(v)) })}
+        ${tableau(["Semaine", "Faits", "Prévus"], semaines.map(s => [`S${s.numero} · ${dateCourte(s.lundi)}`, formatKm(s.kmFaits), formatKm(s.kmPrevus)]))}
+      </div>
+
+      <div class="carte">
+        <h2>Volume de muscu par semaine</h2>
+        <p class="sous-titre-graph">Somme des répétitions × poids notées dans ton carnet (les exercices au poids du corps ne comptent pas)</p>
+        ${aDuVolume
+          ? graphiqueColonnes({ id: "grMuscu", points: pointsMuscu, classe: "muscu", format: kg })
+            + tableau(["Semaine", "Volume"], semaines.map(s => [`S${s.numero} · ${dateCourte(s.lundi)}`, s.volume ? kg(s.volume) : "—"]))
+          : `<p class="vide">Note tes séries avec « 📒 Noter mes séries » dans une séance de muscu : ton volume apparaîtra ici.</p>`}
+      </div>
+
+      <div class="carte">
+        <h2>Records en course</h2>
+        <ul class="records">
+          ${course.map(r => `<li>
+            <span>${r.nom}</span>
+            ${r.record
+              ? `<span class="valeur-record"><strong class="chiffre">${formatChrono(r.record.temps)}</strong><small>${formatAllure(r.record.temps / r.distance)} /km · ${r.record.quand}</small></span>`
+              : `<span class="valeur-record"><strong>—</strong><small>Note-le dans une séance : « ${exemple(r)} »</small></span>`}
+          </li>`).join("")}
+        </ul>
+      </div>
+
+      <div class="carte">
+        <h2>Charges max en muscu</h2>
+        ${muscu.length ? `<ul class="records">
+          ${muscu.map(r => `<li>
+            <span>${r.nom}</span>
+            <span class="valeur-record"><strong class="chiffre">${r.meilleur.poids ? formatPoids(r.meilleur.poids) : r.meilleur.reps + " rép."}</strong>
+            <small>${r.meilleur.poids ? r.meilleur.reps + " rép. · " : "poids du corps · "}${new Date(r.meilleur.date + "T00:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</small></span>
+          </li>`).join("")}
+        </ul>` : `<p class="vide">Pas encore de charge notée. Tes records apparaîtront ici dès ta première séance notée dans le carnet.</p>`}
+      </div>`;
+
+    if (pointsKm.length) brancherGraphique("grKm", pointsKm, lectureKm);
+    if (aDuVolume) brancherGraphique("grMuscu", pointsMuscu, lectureMuscu);
   }
 
   /* ---------- Carnet de muscu : séries, répétitions, poids + progression prudente ---------- */
