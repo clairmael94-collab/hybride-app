@@ -4,211 +4,269 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Hybride – Mon plan</title>
+  <meta name="theme-color" content="#f4f6fa">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    /* ---------- Couleurs (mode clair / sombre) ---------- */
+    /* ==========================================================
+       Style "Data" : net et précis, bleu électrique + corail.
+       Les couleurs sont des variables : on les change pour le mode sombre.
+       ========================================================== */
     :root {
-      --fond: #f4f5f7;
+      --fond: #f4f6fa;
       --carte: #ffffff;
-      --texte: #1c1f24;
-      --texte-doux: #5f6670;
-      --bordure: #e2e5ea;
-      --accent: #2563eb;
-      --course: #0f9d6b;
-      --course-fond: #e3f6ee;
-      --muscu: #d9661f;
-      --muscu-fond: #fcebdf;
-      --repos: #8a919b;
-      --repos-fond: #eef0f3;
-      --alerte: #b45309;
-      --alerte-fond: #fff4e0;
+      --carte-2: #eef1f7;
+      --texte: #0f1b33;
+      --texte-doux: #5e6a85;
+      --bordure: #e3e8f2;
+      --accent: #3d5afe;
+      --sur-accent: #ffffff;
+      --course: #3d5afe;
+      --course-fond: #e6ebff;
+      --muscu: #c8431f;
+      --muscu-fond: #ffe9e3;
+      --repos: #6b7690;
+      --repos-fond: #e9edf4;
+      --succes: #0f8a4a;
+      --succes-fond: #e2f6ea;
+      --alerte: #8a5300;
+      --alerte-fond: #fff3dc;
+      --danger: #c62828;
+      --ph-base: #8fa6ff;
+      --ph-dev: #3d5afe;
+      --ph-legere: #c3cad9;
+      --ph-affutage: #8e5cf7;
+      --ombre: 0 1px 2px rgba(15, 27, 51, 0.06), 0 4px 14px rgba(15, 27, 51, 0.05);
+      color-scheme: light;
     }
+    /* Mode sombre : automatique si le téléphone est en sombre (sauf si on a forcé "clair") */
     @media (prefers-color-scheme: dark) {
-      :root {
-        --fond: #121417;
-        --carte: #1c1f24;
-        --texte: #eceef1;
-        --texte-doux: #a2a9b3;
-        --bordure: #2d3138;
-        --accent: #6b9bff;
-        --course: #3ccf95;
-        --course-fond: #173329;
-        --muscu: #f39a5c;
-        --muscu-fond: #3a2618;
-        --repos: #8a919b;
-        --repos-fond: #25292f;
-        --alerte: #f5b453;
-        --alerte-fond: #3a2c14;
+      :root:not([data-theme="light"]) {
+        --fond: #0b1220; --carte: #141c2e; --carte-2: #1b2540; --texte: #e8edf7; --texte-doux: #9aa6bf;
+        --bordure: #26314a; --accent: #6e86ff; --sur-accent: #0b1220; --course: #8297ff; --course-fond: #1d2750;
+        --muscu: #ff8a6b; --muscu-fond: #3a2019; --repos: #8d98b0; --repos-fond: #1f2738;
+        --succes: #3dd68c; --succes-fond: #123324; --alerte: #f2b45a; --alerte-fond: #33270f; --danger: #ff6b6b;
+        --ph-base: #4c62c9; --ph-dev: #8297ff; --ph-legere: #3a4560; --ph-affutage: #a983ff;
+        --ombre: none; color-scheme: dark;
       }
     }
+    /* Mode sombre forcé dans les réglages */
+    :root[data-theme="dark"] {
+      --fond: #0b1220; --carte: #141c2e; --carte-2: #1b2540; --texte: #e8edf7; --texte-doux: #9aa6bf;
+      --bordure: #26314a; --accent: #6e86ff; --sur-accent: #0b1220; --course: #8297ff; --course-fond: #1d2750;
+      --muscu: #ff8a6b; --muscu-fond: #3a2019; --repos: #8d98b0; --repos-fond: #1f2738;
+      --succes: #3dd68c; --succes-fond: #123324; --alerte: #f2b45a; --alerte-fond: #33270f; --danger: #ff6b6b;
+      --ph-base: #4c62c9; --ph-dev: #8297ff; --ph-legere: #3a4560; --ph-affutage: #a983ff;
+      --ombre: none; color-scheme: dark;
+    }
 
-    /* ---------- Mise en page générale ---------- */
+    /* ---------- Base ---------- */
     * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
     body {
       margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: var(--fond);
       color: var(--texte);
       line-height: 1.45;
+      -webkit-tap-highlight-color: transparent;
     }
-    main { max-width: 640px; margin: 0 auto; padding: 20px 16px 48px; }
-    h1 { font-size: 1.6rem; margin: 0 0 4px; }
-    h2 { font-size: 1.15rem; margin: 0 0 12px; }
-    .sous-titre { color: var(--texte-doux); margin: 0 0 20px; }
+    main { max-width: 560px; margin: 0 auto; padding: 18px 16px calc(110px + env(safe-area-inset-bottom)); }
+    h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+    h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 12px; letter-spacing: -0.01em; }
+    .sous-titre { color: var(--texte-doux); margin: 2px 0 16px; font-size: 0.92rem; }
+    .chiffre { font-variant-numeric: tabular-nums; }
+    svg.ico { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 
     .carte {
       background: var(--carte);
       border: 1px solid var(--bordure);
-      border-radius: 14px;
+      border-radius: 18px;
       padding: 16px;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
+      box-shadow: var(--ombre);
     }
 
-    /* ---------- Formulaire ---------- */
-    label { display: block; font-size: 0.9rem; color: var(--texte-doux); margin-bottom: 4px; }
-    input, select {
-      width: 100%;
-      font-size: 1rem;
-      padding: 10px 12px;
-      border: 1px solid var(--bordure);
-      border-radius: 10px;
-      background: var(--fond);
-      color: var(--texte);
+    /* ---------- Boutons et champs ---------- */
+    button {
+      width: 100%; min-height: 48px; font: inherit; font-size: 1rem; font-weight: 600;
+      padding: 12px 14px; border: none; border-radius: 14px;
+      background: var(--accent); color: var(--sur-accent); cursor: pointer;
+      transition: transform 0.12s, opacity 0.12s;
     }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.35; cursor: default; transform: none; }
+    button.secondaire { background: var(--carte-2); color: var(--texte); border: 1px solid var(--bordure); }
+    button.danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+    button.large { margin-top: 14px; }
+    :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+    label { display: block; font-size: 0.88rem; color: var(--texte-doux); margin-bottom: 6px; font-weight: 500; }
+    input, select, textarea {
+      width: 100%; font: inherit; font-size: 1rem; /* 16px : évite le zoom automatique sur iPhone */
+      padding: 12px 14px; min-height: 48px; border: 1px solid var(--bordure); border-radius: 12px;
+      background: var(--carte-2); color: var(--texte);
+    }
+    textarea { resize: vertical; min-height: 84px; }
     .grille { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
     .grille .plein { grid-column: 1 / -1; }
-    .aide { font-size: 0.8rem; color: var(--texte-doux); margin: 4px 0 0; }
-
+    .aide { font-size: 0.82rem; color: var(--texte-doux); margin: 6px 0 0; }
+    .erreur { color: var(--danger); font-weight: 600; margin: 10px 0 0; }
     .jours { display: grid; gap: 8px; }
     .jour-ligne { display: grid; grid-template-columns: 90px 1fr; align-items: center; gap: 8px; }
     .jour-ligne span { font-weight: 600; }
 
-    button {
-      width: 100%;
-      font-size: 1.05rem;
-      font-weight: 600;
-      padding: 14px;
-      border: none;
-      border-radius: 12px;
-      background: var(--accent);
-      color: #fff;
-      cursor: pointer;
-    }
-    .erreur { color: #dc2626; font-weight: 600; margin: 10px 0 0; }
-
-    /* ---------- Résumé ---------- */
-    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .stat { background: var(--fond); border-radius: 10px; padding: 10px 12px; }
-    .stat small { display: block; color: var(--texte-doux); font-size: 0.8rem; }
-    .stat strong { font-size: 1.15rem; }
-    .message { margin: 12px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--fond); }
-    .message.alerte { background: var(--alerte-fond); color: var(--alerte); }
-
-    /* ---------- Semaine ---------- */
-    .seance {
-      background: var(--carte);
-      border: 1px solid var(--bordure);
-      border-left: 6px solid var(--repos);
-      border-radius: 12px;
-      padding: 12px 14px;
-      margin-bottom: 10px;
-    }
-    .seance.course { border-left-color: var(--course); }
-    .seance.muscu  { border-left-color: var(--muscu); }
-    .seance-tete { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-    .seance-jour { font-weight: 700; }
-    .badge { font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
-    .course .badge { background: var(--course-fond); color: var(--course); }
-    .muscu .badge  { background: var(--muscu-fond);  color: var(--muscu); }
-    .repos .badge  { background: var(--repos-fond);  color: var(--repos); }
-    .seance-titre { font-size: 1.05rem; font-weight: 600; margin: 6px 0 4px; }
-    .seance ul { margin: 4px 0 0; padding-left: 18px; }
-    .seance li { margin-bottom: 2px; }
-    .allure {
-      display: inline-block;
-      margin-top: 8px;
-      padding: 4px 10px;
-      border-radius: 8px;
-      background: var(--course-fond);
-      color: var(--course);
-      font-weight: 700;
-    }
-    .note { font-size: 0.8rem; color: var(--texte-doux); }
-
-    /* ---------- Navigation entre les semaines ---------- */
-    .nav-semaine {
-      display: flex; align-items: center; justify-content: space-between; gap: 10px;
-      background: var(--carte); border: 1px solid var(--bordure); border-radius: 14px;
-      padding: 10px; text-align: center;
-    }
-    .nav-semaine small { display: block; color: var(--texte-doux); font-size: 0.8rem; }
-    .fleche { width: 48px; height: 48px; padding: 0; font-size: 1.1rem; flex-shrink: 0; }
-    .fleche:disabled { opacity: 0.3; cursor: default; }
-    .message.phase { margin: 10px 0 14px; }
-    .message.ajustement { margin: -6px 0 14px; background: var(--alerte-fond); color: var(--alerte); font-size: 0.92rem; }
+    /* ---------- Messages ---------- */
+    .message { margin: 12px 0 0; padding: 12px 14px; border-radius: 14px; background: var(--carte-2); font-size: 0.93rem; }
+    .message.alerte, .message.ajustement { background: var(--alerte-fond); color: var(--alerte); }
+    .message.ajustement { margin: 0 0 10px; }
     .message.proposition { background: var(--course-fond); color: var(--texte); }
     .boutons { display: flex; gap: 8px; margin-top: 10px; }
-    .boutons button { width: auto; flex: 1; padding: 10px; font-size: 0.95rem; }
-    .boutons .secondaire { background: var(--fond); color: var(--texte); border: 1px solid var(--bordure); }
+    .boutons button { flex: 1; }
+    .note { font-size: 0.8rem; color: var(--texte-doux); margin-top: 18px; }
 
-    /* ---------- Aperçu du plan (barres) ---------- */
-    .apercu { display: flex; align-items: flex-end; gap: 2px; height: 74px; margin: 12px 0 6px; }
-    .apercu .barre { flex: 1; width: auto; min-width: 0; padding: 0; border-radius: 3px 3px 0 0; opacity: 0.45; }
-    .apercu .barre.active { opacity: 1; outline: 2px solid var(--texte); outline-offset: 1px; }
+    /* ---------- En-tête : anneau de progression de la semaine en cours ---------- */
+    .compteur { display: flex; align-items: center; gap: 14px; }
+    .anneau { position: relative; width: 64px; height: 64px; flex-shrink: 0; }
+    .anneau svg { width: 64px; height: 64px; transform: rotate(-90deg); }
+    .anneau circle { fill: none; stroke-width: 7; }
+    .anneau .piste { stroke: var(--carte-2); }
+    .anneau .valeur { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset 0.6s cubic-bezier(.2,.8,.2,1), stroke 0.3s; }
+    .anneau span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.05rem; }
+    .compteur.complet .valeur { stroke: var(--succes); }
+    .compteur strong { display: block; font-size: 1.05rem; }
+    .compteur small { color: var(--texte-doux); font-size: 0.85rem; }
+    .compteur.pulse .anneau { animation: pulse 0.5s ease; }
+
+    /* ---------- Repères (tuiles de chiffres) ---------- */
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat { background: var(--carte-2); border-radius: 14px; padding: 12px; }
+    .stat small { display: block; color: var(--texte-doux); font-size: 0.78rem; font-weight: 500; }
+    .stat strong { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+
+    /* ---------- En-tête de semaine + aperçu du plan ---------- */
+    .entete-semaine { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
+    .entete-semaine h2 { font-size: 1.35rem; font-weight: 700; margin: 0; }
+    .entete-semaine small { display: block; color: var(--texte-doux); font-size: 0.85rem; }
+    .km-semaine { text-align: right; }
+    .km-semaine strong { font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .apercu { display: flex; align-items: flex-end; gap: 2px; height: 70px; margin: 14px 0 8px; }
+    .apercu .barre { flex: 1; width: auto; min-width: 0; min-height: 0; padding: 0; border-radius: 4px 4px 2px 2px; opacity: 0.4; background: var(--phase); }
+    .apercu .barre.active { opacity: 1; outline: 2px solid var(--texte); outline-offset: 2px; }
+    .apercu .barre:active { transform: none; }
     .legende { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.75rem; color: var(--texte-doux); }
-    .pastille { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
-    .base { --phase: var(--course); }
-    .developpement { --phase: var(--accent); }
-    .legere { --phase: var(--repos); }
-    .affutage { --phase: var(--muscu); }
-    .barre, .pastille { background: var(--phase); }
-    .distance { display: inline-block; margin: 8px 0 0 6px; font-size: 0.9rem; color: var(--texte-doux); font-weight: 600; }
+    .pastille { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; background: var(--phase); }
+    .base { --phase: var(--ph-base); }
+    .developpement { --phase: var(--ph-dev); }
+    .legere { --phase: var(--ph-legere); }
+    .affutage { --phase: var(--ph-affutage); }
+    .phase-ligne { margin: 12px 0 0; font-size: 0.92rem; color: var(--texte-doux); }
+    .phase-ligne strong { color: var(--texte); }
 
-    /* ---------- Compteur de la semaine ---------- */
-    .compteur {
-      background: var(--carte); border: 1px solid var(--bordure); border-radius: 14px;
-      padding: 12px 16px; margin-bottom: 16px; font-size: 1rem;
+    /* ---------- Cartes de séance ---------- */
+    .seance {
+      --couleur: var(--repos); --couleur-fond: var(--repos-fond);
+      background: var(--carte); border: 1px solid var(--bordure); border-radius: 18px;
+      padding: 14px; margin-bottom: 10px; box-shadow: var(--ombre);
+      transition: background 0.3s, border-color 0.3s;
     }
-    .compteur.complet { background: var(--course-fond); color: var(--course); border-color: var(--course); }
+    .seance.course { --couleur: var(--course); --couleur-fond: var(--course-fond); }
+    .seance.muscu  { --couleur: var(--muscu);  --couleur-fond: var(--muscu-fond); }
+    .seance.repos  { background: var(--carte-2); box-shadow: none; }
+    .seance.aujourdhui { border: 2px solid var(--couleur); }
+    .seance-tete { display: flex; align-items: center; gap: 12px; }
+    .icone {
+      width: 44px; height: 44px; border-radius: 14px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--couleur-fond); color: var(--couleur);
+    }
+    .seance-infos { flex: 1; min-width: 0; }
+    .seance-jour { font-size: 0.8rem; color: var(--texte-doux); font-weight: 500; }
+    .seance-jour .auj { color: var(--couleur); font-weight: 700; }
+    .seance-titre { font-size: 1.02rem; font-weight: 600; line-height: 1.25; }
+    .seance ul { margin: 10px 0 0; padding-left: 18px; color: var(--texte); font-size: 0.93rem; }
+    .seance li { margin-bottom: 3px; }
+    .seance li::marker { color: var(--texte-doux); }
+    .puces-info { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .allure, .distance {
+      display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 999px;
+      font-size: 0.85rem; font-weight: 600; font-variant-numeric: tabular-nums;
+    }
+    .allure { background: var(--couleur-fond); color: var(--couleur); }
+    .distance { background: var(--carte-2); color: var(--texte-doux); }
 
-    /* ---------- Suivi : case "faite" + note ---------- */
-    .suivi { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--bordure); }
-    .case { display: flex; align-items: center; gap: 10px; font-size: 1rem; font-weight: 600; color: var(--texte); margin-bottom: 8px; cursor: pointer; }
-    .case input { width: 22px; height: 22px; margin: 0; accent-color: var(--course); }
-    .note-saisie { font-size: 0.95rem; padding: 8px 10px; }
+    /* Coche ronde, à droite (zone du pouce) */
+    .coche { position: relative; width: 48px; height: 48px; margin: 0; flex-shrink: 0; cursor: pointer; }
+    .coche input { position: absolute; inset: 0; opacity: 0; margin: 0; width: 100%; height: 100%; min-height: 0; cursor: pointer; }
+    .coche span {
+      position: absolute; inset: 6px; border-radius: 50%; border: 2px solid var(--bordure);
+      display: flex; align-items: center; justify-content: center; color: transparent;
+      transition: background 0.25s, border-color 0.25s, color 0.25s;
+    }
+    .coche span svg { width: 20px; height: 20px; stroke-width: 3; }
+    .coche input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
+    .seance.faite .coche span { background: var(--succes); border-color: var(--succes); color: #fff; }
+    .seance.faite { background: var(--succes-fond); border-color: transparent; }
+    .seance.faite .icone { background: var(--carte); }
+    .seance.juste-faite .coche span { animation: pop 0.45s cubic-bezier(.3,1.6,.5,1); }
+    #resultats > .seance.juste-faite { animation: pulse 0.45s ease; }
+
+    /* Note (repliée par défaut) */
+    .suivi { margin-top: 10px; }
+    .suivi summary {
+      list-style: none; cursor: pointer; font-size: 0.88rem; color: var(--texte-doux); font-weight: 500;
+      min-height: 40px; display: flex; align-items: center; gap: 6px;
+    }
+    .suivi summary::-webkit-details-marker { display: none; }
+    .suivi summary .apercu-note { color: var(--texte); font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .note-saisie { font-size: 1rem; margin-top: 4px; }
     .puces { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
     .puces button {
-      width: auto; font-size: 0.85rem; font-weight: 500; padding: 6px 10px;
-      border-radius: 999px; background: var(--fond); color: var(--texte); border: 1px solid var(--bordure);
+      width: auto; min-height: 40px; font-size: 0.88rem; font-weight: 500; padding: 8px 12px;
+      border-radius: 999px; background: var(--carte-2); color: var(--texte); border: 1px solid var(--bordure);
     }
-    .seance.faite { opacity: 0.75; }
-    .seance.faite .seance-titre::before { content: "✅ "; }
-    .conseil-douleur { margin: 8px 0 0; padding: 8px 10px; border-radius: 8px; font-size: 0.85rem; background: var(--alerte-fond); color: var(--alerte); }
+    .conseil-douleur { margin: 8px 0 0; padding: 10px 12px; border-radius: 12px; font-size: 0.86rem; background: var(--alerte-fond); color: var(--alerte); }
+
+    /* ---------- Barre du bas (navigation d'une main) ---------- */
+    .barre-bas {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+      padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+      background: color-mix(in srgb, var(--fond) 88%, transparent);
+      -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+      border-top: 1px solid var(--bordure);
+    }
+    .barre-bas > div { max-width: 560px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
+    .barre-bas .fleche { width: 56px; flex-shrink: 0; padding: 0; background: var(--carte); color: var(--texte); border: 1px solid var(--bordure); }
+    .barre-bas .fleche svg { width: 22px; height: 22px; }
+    .barre-bas .centre { flex: 1; text-align: center; line-height: 1.2; }
+    .barre-bas .centre strong { display: block; font-size: 0.98rem; }
+    .barre-bas .centre small { color: var(--texte-doux); font-size: 0.8rem; }
+    .barre-bas .auj-btn { width: auto; min-height: 36px; padding: 6px 12px; font-size: 0.85rem; margin-top: 4px; }
 
     /* ---------- Écran d'accueil (questions) ---------- */
-    .progression { height: 6px; background: var(--fond); border-radius: 999px; overflow: hidden; }
-    .progression div { height: 100%; background: var(--accent); transition: width 0.2s; }
-    .etape-num { font-size: 0.8rem; color: var(--texte-doux); margin: 6px 0 14px; }
-    .question { font-size: 1.35rem; margin-bottom: 6px; }
+    .progression { height: 6px; background: var(--carte-2); border-radius: 999px; overflow: hidden; }
+    .progression div { height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.3s; }
+    .etape-num { font-size: 0.8rem; color: var(--texte-doux); margin: 8px 0 14px; font-weight: 500; }
+    .question { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 6px; }
     .aide-q { color: var(--texte-doux); font-size: 0.9rem; margin: 4px 0 12px; }
     .contenu-q { margin: 14px 0; }
     .contenu-q p { margin: 0 0 10px; }
     .nav-q { display: flex; gap: 10px; margin-top: 18px; }
     .nav-q button { flex: 1; }
-    button.secondaire { background: var(--fond); color: var(--texte); border: 1px solid var(--bordure); }
-    button.large { margin-top: 14px; }
     .choix { display: grid; gap: 10px; }
     .choix button, .nombres button, .segment button {
-      background: var(--fond); color: var(--texte); border: 2px solid var(--bordure); text-align: left;
+      background: var(--carte-2); color: var(--texte); border: 2px solid transparent; text-align: left;
     }
+    .choix button { padding: 14px 16px; }
     .choix button small { display: block; font-weight: 400; color: var(--texte-doux); font-size: 0.85rem; margin-top: 2px; }
-    .choix button.choisi, .nombres button.choisi { border-color: var(--accent); background: var(--carte); }
+    .choix button.choisi, .nombres button.choisi { border-color: var(--accent); background: var(--course-fond); }
     .sous-q { font-weight: 600; margin: 14px 0 8px !important; }
     .nombres { display: flex; gap: 8px; }
-    .nombres button { flex: 1; text-align: center; padding: 12px 0; }
+    .nombres button { flex: 1; text-align: center; padding: 12px 0; font-size: 1.1rem; }
     .jour-q { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-    .jour-q span { font-weight: 600; width: 80px; flex-shrink: 0; }
+    .jour-q span { font-weight: 600; width: 78px; flex-shrink: 0; font-size: 0.95rem; }
     .segment { display: flex; flex: 1; gap: 4px; }
-    .segment button { flex: 1; padding: 9px 0; font-size: 0.85rem; text-align: center; border-width: 1px; }
+    .segment button { flex: 1; min-height: 44px; padding: 8px 0; font-size: 0.85rem; text-align: center; border-width: 1px; border-color: var(--bordure); }
     .segment button.choisi.course { background: var(--course-fond); color: var(--course); border-color: var(--course); }
     .segment button.choisi.muscu { background: var(--muscu-fond); color: var(--muscu); border-color: var(--muscu); }
     .segment button.choisi.repos { background: var(--repos-fond); color: var(--texte); border-color: var(--repos); }
@@ -216,31 +274,38 @@
     .resume li { margin-bottom: 8px; }
 
     /* ---------- Réglages ---------- */
-    .reglages summary { font-weight: 700; font-size: 1.05rem; cursor: pointer; }
+    .reglages summary { font-weight: 700; font-size: 1.05rem; cursor: pointer; min-height: 32px; display: flex; align-items: center; gap: 8px; }
     .boutons-reglages { display: grid; gap: 10px; margin-top: 14px; }
-    button.danger { background: transparent; color: #dc2626; border: 1px solid #dc2626; }
+    .theme-choix { display: flex; gap: 6px; background: var(--carte-2); padding: 4px; border-radius: 14px; }
+    .theme-choix button { flex: 1; min-height: 42px; background: transparent; color: var(--texte-doux); font-size: 0.92rem; }
+    .theme-choix button.choisi { background: var(--carte); color: var(--texte); box-shadow: var(--ombre); }
 
     /* ---------- Avis ---------- */
     .lien-avis { text-align: center; margin: 8px 0 0; }
-    .lien-avis button { width: auto; background: none; color: var(--texte-doux); font-size: 0.9rem; font-weight: 500; text-decoration: underline; padding: 8px; }
+    .lien-avis button { width: auto; background: none; color: var(--texte-doux); font-size: 0.9rem; font-weight: 500; text-decoration: underline; }
     dialog {
-      width: min(560px, calc(100% - 32px)); max-height: calc(100% - 32px); border: 1px solid var(--bordure);
-      border-radius: 16px; padding: 18px; background: var(--carte); color: var(--texte);
+      width: min(520px, calc(100% - 24px)); max-height: calc(100% - 24px); border: 1px solid var(--bordure);
+      border-radius: 20px; padding: 18px; background: var(--carte); color: var(--texte);
     }
-    dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+    dialog::backdrop { background: rgba(5, 10, 20, 0.55); }
     dialog label { margin-top: 12px; color: var(--texte); font-weight: 600; }
-    textarea {
-      width: 100%; font: inherit; padding: 10px 12px; border: 1px solid var(--bordure); border-radius: 10px;
-      background: var(--fond); color: var(--texte); resize: vertical;
+
+    /* ---------- Animations ---------- */
+    @keyframes pop { 0% { transform: scale(0.6); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }
+    @keyframes pulse { 0% { transform: scale(1); } 40% { transform: scale(1.025); } 100% { transform: scale(1); } }
+    @keyframes apparition { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    #resultats > *, #accueil > * { animation: apparition 0.3s ease both; }
+    /* Si le téléphone demande moins d'animations : on les coupe */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
     }
-    button:disabled { opacity: 0.6; }
   </style>
 </head>
 <body>
 <main>
   <h1>Ma semaine hybride</h1>
   <p class="sous-titre">Course à pied + muscu, organisées pour ne pas se gêner.</p>
-  <div id="compteur" class="compteur" hidden></div>
+  <div id="compteur" class="carte compteur" hidden></div>
 
   <!-- ========== ÉCRAN D'ACCUEIL (questions une par une) ========== -->
   <section id="accueil" class="carte" hidden></section>
@@ -249,10 +314,17 @@
   <section id="appli" hidden>
     <p class="erreur" id="erreur" hidden></p>
     <section id="resultats"></section>
+    <nav class="barre-bas" id="barreBas" aria-label="Changer de semaine"></nav>
 
     <!-- Réglages -->
     <details class="carte reglages" id="reglages">
       <summary>⚙️ Réglages</summary>
+      <h2 style="margin-top:16px">Apparence</h2>
+      <div class="theme-choix" id="themeChoix">
+        <button type="button" data-theme="auto" onclick="choisirTheme('auto')">Auto</button>
+        <button type="button" data-theme="light" onclick="choisirTheme('light')">Clair</button>
+        <button type="button" data-theme="dark" onclick="choisirTheme('dark')">Sombre</button>
+      </div>
       <div class="boutons-reglages">
         <button type="button" onclick="ouvrirQuestionnaire(true)">✏️ Modifier mon profil</button>
         <button type="button" class="danger" onclick="recommencerAZero()">🗑️ Recommencer à zéro</button>
@@ -926,7 +998,7 @@
       message = `Objectif nettement plus rapide que ton niveau estimé (${formatDuree(estimation)}). Il serait prudent de viser un chrono intermédiaire.`;
     }
 
-    afficherResultats({ allures, estimation: sansChrono ? null : estimation, semainesRestantes, semaine, avertissements, message, distanceObjectif, plan, debutSemaine, alertes, chrono });
+    afficherResultats({ semaineActuelle, allures, estimation: sansChrono ? null : estimation, semainesRestantes, semaine, avertissements, message, distanceObjectif, plan, debutSemaine, alertes, chrono });
   }
 
   function lundiDeLaSemaine(debutPlan, numero) {
@@ -1055,8 +1127,24 @@
   }
 
   /* ---------- Affichage ---------- */
+  // Petites icônes dessinées (traits), d'après Tabler Icons (licence MIT)
+  const ICONES = {
+    course: '<path d="M12 4a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M4 17l5 1l.75 -1.5"/><path d="M15 21v-4l-4 -3l1 -6"/><path d="M7 12v-3l5 -1l3 3l3 1"/>',
+    muscu: '<path d="M2 12h1"/><path d="M6 8h-2a1 1 0 0 0 -1 1v6a1 1 0 0 0 1 1h2"/><path d="M6 7v10a1 1 0 0 0 1 1h1a1 1 0 0 0 1 -1v-10a1 1 0 0 0 -1 -1h-1a1 1 0 0 0 -1 1z"/><path d="M9 12h6"/><path d="M15 7v10a1 1 0 0 0 1 1h1a1 1 0 0 0 1 -1v-10a1 1 0 0 0 -1 -1h-1a1 1 0 0 0 -1 1z"/><path d="M18 8h2a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-2"/><path d="M22 12h-1"/>',
+    repos: '<path d="M12 3h.393a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z"/>',
+    course_jourJ: '<path d="M5 5a5 5 0 0 1 7 0a5 5 0 0 0 7 0v9a5 5 0 0 1 -7 0a5 5 0 0 0 -7 0v-9z"/><path d="M5 21v-7"/>',
+    coche: '<path d="M5 12l5 5l10 -10"/>',
+    gauche: '<path d="M15 6l-6 6l6 6"/>',
+    droite: '<path d="M9 6l6 6l-6 6"/>',
+  };
+  const icone = nom => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICONES[nom]}</svg>`;
+
   function afficherResultats(r) {
-    const nomsType = { course: "Course", muscu: "Muscu", repos: "Repos" };
+    const s0 = r.semaine;
+    const aujourdhui = cleSeance(new Date(), 0).slice(0, 10);
+    const dateCourte = d => d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+    const finSemaine = new Date(r.debutSemaine);
+    finSemaine.setDate(finSemaine.getDate() + 6);
 
     let html = `
       <div class="carte">
@@ -1081,57 +1169,84 @@
             </div>
           </div>` : ""}
       </div>
-      <div class="nav-semaine">
-        <button type="button" class="fleche" onclick="changerSemaine(-1)" ${r.semaine.numero === 1 ? "disabled" : ""} aria-label="Semaine précédente">◀</button>
-        <div>
-          <strong>Semaine ${r.semaine.numero} / ${r.semaine.total} · ${formatKm(r.semaine.km)}</strong>
-          <small>à partir du lundi ${r.debutSemaine.toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}</small>
+
+      <div class="carte">
+        <div class="entete-semaine">
+          <div>
+            <h2>Semaine ${s0.numero}<span style="color:var(--texte-doux);font-weight:500"> / ${s0.total}</span></h2>
+            <small>${dateCourte(r.debutSemaine)} – ${dateCourte(finSemaine)}</small>
+          </div>
+          <div class="km-semaine"><strong>${formatKm(s0.km)}</strong><small>de course</small></div>
         </div>
-        <button type="button" class="fleche" onclick="changerSemaine(1)" ${r.semaine.numero === r.semaine.total ? "disabled" : ""} aria-label="Semaine suivante">▶</button>
+        ${apercuPlan(r.plan, s0.numero)}
+        <p class="phase-ligne"><span class="pastille ${s0.phase}"></span><strong>${PHASES[s0.phase].nom}</strong> · ${s0.semaineCourse ? "Semaine de la course ! Muscu remplacée par de la mobilité." : PHASES[s0.phase].texte}</p>
       </div>
-      ${apercuPlan(r.plan, r.semaine.numero)}
-      <p class="message phase"><span class="pastille ${r.semaine.phase}"></span><strong>${PHASES[r.semaine.phase].nom}</strong> · ${r.semaine.semaineCourse ? "Semaine de la course ! Muscu remplacée par de la mobilité." : PHASES[r.semaine.phase].texte}</p>
-      ${r.semaine.ajustements.map(a => `<p class="message ajustement">🔄 ${a}</p>`).join("")}`;
+      ${s0.ajustements.map(a => `<p class="message ajustement">🔄 ${a}</p>`).join("")}`;
 
     let indexFooting = 0;
-    r.semaine.jours.forEach((jour, i) => {
-      const d = detailSeance(jour, r.allures, r.semaine, r.distanceObjectif, indexFooting);
+    s0.jours.forEach((jour, i) => {
+      const d = detailSeance(jour, r.allures, s0, r.distanceObjectif, indexFooting);
       if (jour.seance === "footing") indexFooting++;
-      // Zone "séance faite + note" (pas pour les jours de repos)
       const cle = cleSeance(r.debutSemaine, i);
       const s = suivi[cle] || { fait: false, note: "" };
-      const zoneSuivi = jour.type === "repos" ? "" : `
-          <div class="suivi">
-            <label class="case">
-              <input type="checkbox" ${s.fait ? "checked" : ""} onchange="cocher('${cle}', this)">
-              Séance faite
-            </label>
-            <input class="note-saisie" id="note-${cle}" value="${echapper(s.note)}" placeholder="Note (ex : fatigué, 10 km en 44:30)"
-                   oninput="noter('${cle}', this.value)" onchange="generer()">
-            <div class="puces">
-              ${NOTES_RAPIDES.map(n => `<button type="button" onclick="ajouterNote('${cle}', '${n}')">${n}</button>`).join("")}
-            </div>
-            <p class="conseil-douleur" id="conseil-${cle}" ${contientDouleur(s.note) ? "" : "hidden"}>
-              Une douleur qui persiste ou augmente : mets la séance en pause et demande l'avis d'un professionnel de santé.
-            </p>
-          </div>`;
+      const dateJour = new Date(r.debutSemaine);
+      dateJour.setDate(dateJour.getDate() + i);
+      const estAujourdhui = cleSeance(dateJour, 0).slice(0, 10) === aujourdhui;
+      const nomIcone = jour.seance === "jourJ" ? "course_jourJ" : jour.type;
+
+      // Coche ronde à droite + note repliable (pas pour les jours de repos)
+      const coche = jour.type === "repos" ? "" : `
+        <label class="coche" title="Séance faite">
+          <input type="checkbox" ${s.fait ? "checked" : ""} onchange="cocher('${cle}', this)" aria-label="${JOURS[i]} : séance faite">
+          <span>${icone("coche")}</span>
+        </label>`;
+      const zoneNote = jour.type === "repos" ? "" : `
+        <details class="suivi">
+          <summary>📝 ${s.note ? `<span class="apercu-note">${echapper(s.note)}</span>` : "Ajouter une note"}</summary>
+          <input class="note-saisie" id="note-${cle}" value="${echapper(s.note)}" placeholder="Ex : fatigué, 10 km en 44:30"
+                 oninput="noter('${cle}', this.value)" onchange="generer()" aria-label="Note de la séance">
+          <div class="puces">
+            ${NOTES_RAPIDES.map(n => `<button type="button" onclick="ajouterNote('${cle}', '${n}')">${n}</button>`).join("")}
+          </div>
+        </details>
+        <p class="conseil-douleur" id="conseil-${cle}" ${contientDouleur(s.note) ? "" : "hidden"}>
+          Une douleur qui persiste ou augmente : mets la séance en pause et demande l'avis d'un professionnel de santé.
+        </p>`;
 
       html += `
-        <div class="seance ${jour.type} ${s.fait ? "faite" : ""}" id="seance-${cle}">
+        <article class="seance ${jour.type} ${s.fait ? "faite" : ""} ${estAujourdhui ? "aujourdhui" : ""}" id="seance-${cle}">
           <div class="seance-tete">
-            <span class="seance-jour">${JOURS[i]}</span>
-            <span class="badge">${nomsType[jour.type]}</span>
+            <div class="icone">${icone(nomIcone)}</div>
+            <div class="seance-infos">
+              <div class="seance-jour">${JOURS[i]}${estAujourdhui ? ' · <span class="auj">Aujourd\'hui</span>' : ""}</div>
+              <div class="seance-titre">${d.titre}</div>
+            </div>
+            ${coche}
           </div>
-          <div class="seance-titre">${d.titre}</div>
           <ul>${d.lignes.map(l => `<li>${l}</li>`).join("")}</ul>
-          ${d.allure ? `<span class="allure">🎯 ${d.allure}</span>` : ""}
-          ${d.km ? `<span class="distance">≈ ${formatKm(d.km)}</span>` : ""}
-          ${zoneSuivi}
-        </div>`;
+          ${d.allure || d.km ? `<div class="puces-info">
+            ${d.allure ? `<span class="allure">🎯 ${d.allure}</span>` : ""}
+            ${d.km ? `<span class="distance">≈ ${formatKm(d.km)}</span>` : ""}
+          </div>` : ""}
+          ${zoneNote}
+        </article>`;
     });
 
-    const zone = document.getElementById("resultats");
-    zone.innerHTML = html;
+    document.getElementById("resultats").innerHTML = html;
+
+    // Barre du bas : semaine précédente / suivante, et retour à aujourd'hui
+    const actuelle = r.semaineActuelle;
+    document.getElementById("barreBas").innerHTML = `
+      <div>
+        <button type="button" class="fleche" onclick="changerSemaine(-1)" ${s0.numero === 1 ? "disabled" : ""} aria-label="Semaine précédente">${icone("gauche")}</button>
+        <div class="centre">
+          <strong>Semaine ${s0.numero} · ${formatKm(s0.km)}</strong>
+          ${actuelle !== s0.numero && actuelle >= 1 && actuelle <= s0.total
+            ? `<button type="button" class="auj-btn" onclick="allerSemaine(${actuelle})">Revenir à cette semaine</button>`
+            : `<small>${PHASES[s0.phase].nom}</small>`}
+        </div>
+        <button type="button" class="fleche" onclick="changerSemaine(1)" ${s0.numero === s0.total ? "disabled" : ""} aria-label="Semaine suivante">${icone("droite")}</button>
+      </div>`;
     majCompteur();
   }
 
@@ -1177,10 +1292,20 @@
     return `${aaaa}-${mm}-${jj}-${jour}`;
   }
 
+  // Cocher une séance : on met à jour la carte et le compteur avec une petite animation.
+  // (Le plan des semaines suivantes sera recalculé au prochain changement de semaine.)
   function cocher(cle, caseACocher) {
     suivi[cle] = { ...suivi[cle], fait: caseACocher.checked };
     sauverSuivi();
-    generer(); // le plan des semaines suivantes peut changer
+    const carte = document.getElementById("seance-" + cle);
+    carte.classList.toggle("faite", caseACocher.checked);
+    carte.classList.remove("juste-faite");
+    if (caseACocher.checked) {
+      void carte.offsetWidth; // relance l'animation même si on recoche vite
+      carte.classList.add("juste-faite");
+      if (navigator.vibrate) navigator.vibrate(15); // petite vibration (Android)
+    }
+    majCompteur(true);
   }
 
   function noter(cle, texte) {
@@ -1212,7 +1337,8 @@
   }
 
   // Compteur en haut de page : séances faites dans la semaine en cours (la vraie, d'après le calendrier)
-  function majCompteur() {
+  // Anneau en haut de page : séances faites dans la semaine en cours (la vraie, d'après le calendrier)
+  function majCompteur(animer) {
     const lundi = lundiDe(new Date());
     let prevues = 0, faites = 0;
     JOURS.forEach((_, i) => {
@@ -1222,8 +1348,27 @@
     });
     const compteur = document.getElementById("compteur");
     compteur.hidden = false;
-    compteur.innerHTML = `<strong>${faites} séance${faites > 1 ? "s" : ""} sur ${prevues}</strong> faite${faites > 1 ? "s" : ""} cette semaine`;
-    compteur.classList.toggle("complet", prevues > 0 && faites === prevues);
+    const tour = 2 * Math.PI * 27; // périmètre du cercle
+    if (!compteur.querySelector(".anneau")) {
+      compteur.innerHTML = `
+        <div class="anneau"><svg viewBox="0 0 64 64" aria-hidden="true">
+          <circle class="piste" cx="32" cy="32" r="27"/>
+          <circle class="valeur" cx="32" cy="32" r="27" stroke-dasharray="${tour}" stroke-dashoffset="${tour}"/>
+        </svg><span class="chiffre"></span></div>
+        <div><strong></strong><small></small></div>`;
+      void compteur.offsetWidth;
+    }
+    compteur.querySelector(".valeur").setAttribute("stroke-dashoffset", tour * (1 - (prevues ? faites / prevues : 0)));
+    compteur.querySelector(".anneau span").textContent = `${faites}/${prevues}`;
+    const complet = prevues > 0 && faites === prevues;
+    compteur.querySelector("strong").textContent = complet ? "Semaine complète, bravo ! 🎉" : `${faites} séance${faites > 1 ? "s" : ""} sur ${prevues}`;
+    compteur.querySelector("small").textContent = complet ? "Toutes tes séances sont faites." : "faites cette semaine";
+    compteur.classList.toggle("complet", complet);
+    if (animer) {
+      compteur.classList.remove("pulse");
+      void compteur.offsetWidth;
+      compteur.classList.add("pulse");
+    }
   }
 
   document.getElementById("formulaire").addEventListener("submit", e => {
@@ -1545,6 +1690,22 @@
     bouton.textContent = "Envoyer";
   });
 
+  /* ---------- Apparence : auto (comme le téléphone), clair ou sombre ---------- */
+  function appliquerTheme(theme) {
+    if (theme === "auto") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", theme);
+    document.querySelectorAll("#themeChoix button").forEach(b => b.classList.toggle("choisi", b.dataset.theme === theme));
+    // Couleur de la barre d'état du téléphone = couleur du fond
+    const fond = getComputedStyle(document.documentElement).getPropertyValue("--fond").trim();
+    document.querySelector('meta[name="theme-color"]').setAttribute("content", fond);
+  }
+  function choisirTheme(theme) {
+    reglages.theme = theme;
+    appliquerTheme(theme);
+    sauverReglages();
+  }
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => appliquerTheme(reglages.theme || "auto"));
+
   // Flèches ◀ ▶ : passe à la semaine précédente ou suivante du plan
   let semaineAffichee = null; // null = la semaine en cours
   function changerSemaine(sens) {
@@ -1558,6 +1719,7 @@
 
   // Au chargement : on remet les réglages enregistrés sur cet appareil
   const reglages = chargerReglages();
+  appliquerTheme(reglages.theme || "auto");
 
   // Quelqu'un qui utilisait déjà l'appli avant l'écran d'accueil (séances cochées, mais pas de profil
   // enregistré) : on remet son profil d'origine et la date de début de son plan. Rien n'est perdu.
