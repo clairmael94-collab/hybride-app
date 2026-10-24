@@ -343,6 +343,22 @@
     dialog.minuteur[data-sorte="attente"] .min-principal { background: var(--accent); color: var(--sur-accent); }
     .min-reglage { width: auto; min-height: 44px; padding: 6px 14px; margin: 4px; background: color-mix(in srgb, var(--min-texte) 12%, transparent); color: var(--min-texte); }
     .min-ecran { font-size: 0.8rem; text-align: center; margin: 12px 0 0; opacity: 0.8; }
+
+    /* ---------- Carnet de muscu ---------- */
+    .bouton-carnet { margin-top: 10px; min-height: 48px; background: var(--carte-2); color: var(--texte); border: 1px solid var(--bordure); font-size: 0.95rem; }
+    dialog.carnet { max-height: calc(100% - 24px); overflow-y: auto; padding-bottom: 0; }
+    dialog.carnet .nav-q { position: sticky; bottom: 0; background: var(--carte); margin: 8px -18px 0; padding: 12px 18px calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid var(--bordure); }
+    .exo { border-top: 1px solid var(--bordure); padding: 14px 0 6px; }
+    .exo h3 { margin: 0 0 4px; font-size: 1.02rem; }
+    .exo h3 small { color: var(--texte-doux); font-weight: 500; font-size: 0.82rem; margin-left: 4px; }
+    .derniere { margin: 0 0 6px; font-size: 0.86rem; color: var(--texte-doux); }
+    .proposition-exo { margin: 0 0 10px; padding: 8px 10px; border-radius: 10px; background: var(--muscu-fond); color: var(--texte); font-size: 0.86rem; }
+    .serie { display: grid; grid-template-columns: 64px 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .serie > span { font-size: 0.85rem; color: var(--texte-doux); font-weight: 600; }
+    .serie label { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--texte-doux); font-size: 0.85rem; }
+    .serie input { text-align: center; padding: 10px 6px; font-variant-numeric: tabular-nums; }
+    .case-carnet { display: flex; align-items: center; gap: 10px; margin: 14px 0 0; color: var(--texte); font-weight: 600; }
+    .case-carnet input { width: 22px; height: 22px; min-height: 0; accent-color: var(--succes); }
   </style>
 </head>
 <body>
@@ -448,6 +464,11 @@
         <button type="submit" style="margin-top:20px">Enregistrer et recalculer</button>
       </form>
     </details>
+
+    <!-- Carnet de muscu : séries, répétitions, poids -->
+    <dialog id="carnet" class="carnet">
+      <form id="formCarnet"></form>
+    </dialog>
 
     <!-- Minuteur plein écran -->
     <dialog id="minuteur" class="minuteur" aria-label="Minuteur">
@@ -892,16 +913,17 @@
       const m = MUSCU[jour.seance];
       const niveau = document.getElementById("niveauMuscu").value;
       const allege = semaine.phase === "affutage";
-      const lignes = m.exos.map(([nom, series, reps], k) => {
+      const exos = m.exos.map(([nom, series, reps], k) => {
         if (niveau === "debutant") { nom = VERSION_DEBUTANT[nom] || nom; series = Math.max(2, series - 1); }
         if (niveau === "avance" && k < 2) series++; // 1 série de plus sur les 2 gros exercices
         if (allege) series = Math.max(2, series - 1);
-        return `${nom} ${series} × ${reps}`;
+        return { nom, series, reps };
       });
+      const lignes = exos.map(e => `${e.nom} ${e.series} × ${e.reps}`);
       if (m.fin) lignes.push(m.fin);
       lignes.push(allege ? "Charges habituelles, mais arrête-toi loin de l'échec." : CONSEIL_NIVEAU[niveau]);
       const duree = m.min - (niveau === "debutant" ? 10 : 0) - (allege ? 10 : 0);
-      return { titre: `${m.nom}${allege ? " (allégée)" : ""} · ${duree} min`, lignes };
+      return { titre: `${m.nom}${allege ? " (allégée)" : ""} · ${duree} min`, lignes, exos, allege };
     }
 
     switch (jour.seance) {
@@ -1063,6 +1085,7 @@
     }
 
     dernieresAllures = allures;
+    dernierPlan = plan;
     afficherHero({ dateCourse, distanceObjectif, tempsObjectif, prediction, regularite });
     afficherResultats({ semaineActuelle, allures, estimation: sansChrono ? null : estimation, semainesRestantes, semaine, avertissements, message, distanceObjectif, plan, debutSemaine, alertes, chrono });
   }
@@ -1384,6 +1407,7 @@
             ${d.km ? `<span class="distance">≈ ${formatKm(d.km)}</span>` : ""}
           </div>` : ""}
           ${boutonMinuteur(jour, s0, cle)}
+          ${d.exos ? boutonCarnet(cle, d) : ""}
           ${zoneNote}
         </article>`;
     });
@@ -1784,17 +1808,171 @@
 
   // "Recommencer à zéro" : efface le profil ET les séances cochées de cet appareil
   function recommencerAZero() {
-    const ok = confirm("Tout effacer sur cet appareil ?\n\nTon profil, ton plan et toutes tes séances cochées et notes seront supprimés. C'est définitif.");
+    const ok = confirm("Tout effacer sur cet appareil ?\n\nTon profil, ton plan, tes séances cochées, tes notes et ton carnet de muscu seront supprimés. C'est définitif.");
     if (!ok) return;
     try {
       localStorage.removeItem(CLE_REGLAGES);
       localStorage.removeItem(CLE_STOCKAGE);
+      localStorage.removeItem(CLE_CARNET);
     } catch (e) { /* stockage bloqué : rien à effacer */ }
     location.reload();
   }
 
+  /* ---------- Carnet de muscu : séries, répétitions, poids + progression prudente ---------- */
+  // Enregistré dans le navigateur sous "hybride-carnet" :
+  // { "Squat": [ { date: "2026-10-19", cible: 6, series: [ { reps: 6, poids: 60 }, … ] }, … ] }
+  const CLE_CARNET = "hybride-carnet";
+  const carnet = (() => {
+    try { return JSON.parse(localStorage.getItem(CLE_CARNET)) || {}; } catch (e) { return {}; }
+  })();
+  function sauverCarnet() {
+    try { localStorage.setItem(CLE_CARNET, JSON.stringify(carnet)); } catch (e) { /* stockage bloqué */ }
+  }
+
+  // Seuls les exercices comptés en répétitions vont dans le carnet (pas le gainage en secondes)
+  const enRepetitions = exo => !/\bs\b/.test(exo.reps) && !isNaN(parseInt(exo.reps));
+  const dateDeCle = cle => {
+    const d = new Date(cle.slice(0, 10) + "T00:00:00");
+    d.setDate(d.getDate() + Number(cle.slice(11)));
+    return cleSeance(d, 0).slice(0, 10);
+  };
+  const formatPoids = p => (p ? p.toLocaleString("fr-FR", { maximumFractionDigits: 1 }) + " kg" : "poids du corps");
+  const lirePoids = texte => { const p = parseFloat(String(texte).replace(",", ".")); return isNaN(p) || p < 0 ? 0 : p; };
+  const arrondi25 = p => Math.round(p / 2.5) * 2.5;
+
+  function boutonCarnet(cle, detail) {
+    const date = dateDeCle(cle);
+    const dejaNote = detail.exos.some(e => (carnet[e.nom] || []).some(x => x.date === date));
+    return `<button type="button" class="bouton-carnet" onclick="ouvrirCarnet('${cle}')">${dejaNote ? "📒 Voir / modifier mes séries" : "📒 Noter mes séries"}</button>`;
+  }
+
+  // Bilan d'une séance passée : poids utilisé, et toutes les répétitions réussies ou non
+  function bilanExo(entree) {
+    const poids = Math.max(...entree.series.map(x => x.poids));
+    const reussi = entree.series.length > 0 && entree.series.every(x => x.reps >= entree.cible);
+    return { poids, reussi };
+  }
+
+  // Proposition pour la prochaine séance, d'après les 2 dernières fois (avant "date")
+  function propositionExo(nom, cible, date, allege) {
+    const historique = (carnet[nom] || []).filter(x => x.date < date).sort((a, b) => a.date.localeCompare(b.date));
+    const derniere = historique[historique.length - 1];
+    const avant = historique[historique.length - 2];
+    if (!derniere) return { poids: null, texte: "Première fois : choisis une charge où il te reste 2 ou 3 répétitions en réserve." };
+    const d = bilanExo(derniere);
+    const a = avant ? bilanExo(avant) : null;
+    if (allege) return { poids: d.poids, texte: "Semaine allégée : garde la même charge, sans forcer." };
+    if (d.reussi && a && a.reussi && a.poids === d.poids) {
+      if (!d.poids) return { poids: 0, texte: "Réussi 2 fois de suite : ajoute 1 ou 2 répétitions par série." };
+      return { poids: d.poids + 2.5, texte: "Toutes les répétitions réussies 2 fois de suite : +2,5 kg (ou la plus petite charge en plus que tu as)." };
+    }
+    if (d.reussi) return { poids: d.poids, texte: "Réussi la dernière fois : refais la même charge pour confirmer avant d'augmenter." };
+    if (a && !a.reussi && a.poids === d.poids && d.poids) {
+      return { poids: arrondi25(d.poids * 0.9), texte: "Pas réussi 2 fois de suite : baisse d'environ 10 % pour retrouver de bonnes séries." };
+    }
+    return { poids: d.poids, texte: "Pas toutes les répétitions la dernière fois : garde la même charge." };
+  }
+
+  let carnetOuvert = null; // { cle, exos }
+
+  function ouvrirCarnet(cle) {
+    // On retrouve la séance affichée pour connaître ses exercices
+    const semaine = dernierPlan[semaineAffichee - 1];
+    const i = Number(cle.slice(11));
+    const detail = detailSeance(semaine.jours[i], dernieresAllures, semaine, Number(document.getElementById("objDistance").value), 0);
+    const exos = detail.exos.filter(enRepetitions);
+    const date = dateDeCle(cle);
+    carnetOuvert = { cle, exos, date };
+    const dateLisible = new Date(date + "T00:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+
+    const blocs = exos.map((exo, k) => {
+      const cible = parseInt(exo.reps);
+      const historique = (carnet[exo.nom] || []).filter(x => x.date < date).sort((a, b) => a.date.localeCompare(b.date));
+      const derniere = historique[historique.length - 1];
+      const dejaFait = (carnet[exo.nom] || []).find(x => x.date === date);
+      const prop = propositionExo(exo.nom, cible, date, detail.allege);
+      const texteDerniere = derniere
+        ? `Dernière fois (${new Date(derniere.date + "T00:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}) : ${derniere.series.map(x => x.reps).join(", ")} répétitions à ${formatPoids(bilanExo(derniere).poids)}`
+        : "Pas encore de séance notée pour cet exercice.";
+      const lignes = Array.from({ length: exo.series }, (_, n) => {
+        const deja = dejaFait?.series[n];
+        const reps = deja ? deja.reps : cible;
+        const poids = deja ? deja.poids : prop.poids ?? "";
+        return `
+          <div class="serie">
+            <span>Série ${n + 1}</span>
+            <label><input id="reps-${k}-${n}" inputmode="numeric" value="${reps}" aria-label="${exo.nom}, série ${n + 1} : répétitions"> rép.</label>
+            <label><input id="poids-${k}-${n}" inputmode="decimal" value="${poids === 0 ? "" : String(poids).replace(".", ",")}" placeholder="0" aria-label="${exo.nom}, série ${n + 1} : poids en kg"> kg</label>
+          </div>`;
+      }).join("");
+      return `
+        <section class="exo">
+          <h3>${exo.nom} <small>objectif ${exo.series} × ${exo.reps}</small></h3>
+          <p class="derniere">${texteDerniere}</p>
+          <p class="proposition-exo">💡 ${prop.poids ? `<strong>${formatPoids(prop.poids)}</strong> · ` : ""}${prop.texte}</p>
+          ${lignes}
+        </section>`;
+    }).join("");
+
+    const dejaCochee = suivi[cle]?.fait;
+    document.getElementById("formCarnet").innerHTML = `
+      <h2>📒 ${detail.titre.split(" · ")[0]}</h2>
+      <p class="aide-q">${dateLisible.charAt(0).toUpperCase() + dateLisible.slice(1)}</p>
+      <p class="aide-q">Laisse le poids vide pour un exercice au poids du corps.</p>
+      ${blocs || "<p>Pas d'exercice à noter dans cette séance.</p>"}
+      ${dejaCochee ? "" : `<label class="case-carnet"><input type="checkbox" id="carnetFaite" checked> Marquer la séance comme faite</label>`}
+      <p class="erreur" id="carnetErreur" hidden></p>
+      <div class="nav-q">
+        <button type="button" class="secondaire" onclick="document.getElementById('carnet').close()">Annuler</button>
+        <button type="submit">Enregistrer</button>
+      </div>`;
+    document.getElementById("carnet").showModal();
+  }
+
+  document.getElementById("formCarnet").addEventListener("submit", e => {
+    e.preventDefault();
+    const { cle, exos, date } = carnetOuvert;
+    // Lecture et vérification
+    const resultats = [];
+    for (const [k, exo] of exos.entries()) {
+      const series = [];
+      for (let n = 0; n < exo.series; n++) {
+        const repsTexte = document.getElementById(`reps-${k}-${n}`).value.trim();
+        const poidsTexte = document.getElementById(`poids-${k}-${n}`).value.trim();
+        const reps = parseInt(repsTexte);
+        if (repsTexte === "") continue; // série pas faite
+        if (isNaN(reps) || reps < 0 || reps > 100) return erreurCarnet(`${exo.nom} : nombre de répétitions incorrect.`);
+        if (poidsTexte && isNaN(parseFloat(poidsTexte.replace(",", ".")))) return erreurCarnet(`${exo.nom} : poids incorrect (exemple : 62,5).`);
+        series.push({ reps, poids: lirePoids(poidsTexte) });
+      }
+      resultats.push({ nom: exo.nom, cible: parseInt(exo.reps), series });
+    }
+    // Enregistrement (remplace ce qui avait été noté ce jour-là)
+    resultats.forEach(r => {
+      carnet[r.nom] = (carnet[r.nom] || []).filter(x => x.date !== date);
+      if (r.series.length) carnet[r.nom].push({ date, cible: r.cible, series: r.series });
+    });
+    sauverCarnet();
+    document.getElementById("carnet").close();
+    const caseFaite = document.getElementById("carnetFaite");
+    if (caseFaite && caseFaite.checked) {
+      const caseCarte = document.querySelector(`#seance-${cle} .coche input`);
+      suivi[cle] = { ...suivi[cle], fait: true };
+      sauverSuivi();
+      if (caseCarte) { caseCarte.checked = true; cocher(cle, caseCarte); }
+    }
+    generer(); // met à jour le bouton "Voir / modifier mes séries"
+  });
+
+  function erreurCarnet(texte) {
+    const zone = document.getElementById("carnetErreur");
+    zone.textContent = texte;
+    zone.hidden = false;
+  }
+
   /* ---------- Minuteur : fractionné (étapes automatiques) et repos de muscu ---------- */
   let dernieresAllures = null; // allures du dernier calcul, pour les durées des répétitions
+  let dernierPlan = null;      // plan du dernier calcul, pour le carnet de muscu
   let minuteur = null;         // le minuteur en cours (null = aucun)
   let audio = null;            // pour les bips
   let verrouEcran = null;      // empêche la mise en veille
