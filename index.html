@@ -470,6 +470,15 @@
         <button type="button" data-theme="light" onclick="choisirTheme('light')">Clair</button>
         <button type="button" data-theme="dark" onclick="choisirTheme('dark')">Sombre</button>
       </div>
+      <h2 style="margin-top:20px">Mes données</h2>
+      <p class="aide" style="margin:-6px 0 10px">Tes données restent sur cet appareil. Sauvegarde-les de temps en temps : tu pourras les remettre sur un autre téléphone ou après avoir vidé ton navigateur.</p>
+      <div class="boutons-reglages">
+        <button type="button" class="secondaire" onclick="sauvegarderDonnees()">💾 Sauvegarder mes données</button>
+        <button type="button" class="secondaire" onclick="document.getElementById('fichierRestauration').click()">📂 Restaurer une sauvegarde</button>
+        <input type="file" id="fichierRestauration" accept=".json,application/json" hidden>
+        <p class="message proposition" id="messageDonnees" hidden></p>
+      </div>
+      <h2 style="margin-top:20px">Profil</h2>
       <div class="boutons-reglages">
         <button type="button" onclick="ouvrirQuestionnaire(true)">✏️ Modifier mon profil</button>
         <button type="button" class="danger" onclick="recommencerAZero()">🗑️ Recommencer à zéro</button>
@@ -1913,6 +1922,73 @@
     } catch (e) { /* stockage bloqué : rien à effacer */ }
     location.reload();
   }
+
+  /* ---------- Sauvegarder / restaurer toutes les données (fichier) ---------- */
+  const VERSION_SAUVEGARDE = 1;
+
+  function messageDonnees(texte, erreur) {
+    const zone = document.getElementById("messageDonnees");
+    zone.textContent = texte;
+    zone.classList.toggle("alerte", !!erreur);
+    zone.hidden = false;
+  }
+
+  // Télécharge un fichier .json avec tout l'historique
+  function sauvegarderDonnees() {
+    sauverReglages();
+    const contenu = {
+      appli: "hybride",
+      version: VERSION_SAUVEGARDE,
+      date: new Date().toISOString(),
+      donnees: { reglages, suivi, carnet, badges },
+    };
+    const fichier = new Blob([JSON.stringify(contenu, null, 2)], { type: "application/json" });
+    const lien = document.createElement("a");
+    lien.href = URL.createObjectURL(fichier);
+    lien.download = `hybride-sauvegarde-${cleSeance(new Date(), 0).slice(0, 10)}.json`;
+    document.body.appendChild(lien);
+    lien.click();
+    lien.remove();
+    setTimeout(() => URL.revokeObjectURL(lien.href), 1000);
+    const nbSeances = Object.values(suivi).filter(x => x.fait).length;
+    messageDonnees(`Sauvegarde créée (${nbSeances} séance${nbSeances > 1 ? "s" : ""} cochée${nbSeances > 1 ? "s" : ""}). Range le fichier dans un endroit sûr : Fichiers, iCloud, Google Drive…`);
+  }
+
+  // Lit le fichier choisi, vérifie qu'il vient bien de l'appli, puis remplace les données
+  document.getElementById("fichierRestauration").addEventListener("change", async e => {
+    const fichier = e.target.files[0];
+    e.target.value = ""; // pour pouvoir rechoisir le même fichier
+    if (!fichier) return;
+    let contenu;
+    try {
+      if (fichier.size > 5 * 1024 * 1024) throw new Error("trop gros");
+      contenu = JSON.parse(await fichier.text());
+    } catch (err) {
+      return messageDonnees("Ce fichier n'est pas une sauvegarde de l'appli (ou il est abîmé).", true);
+    }
+    const d = contenu && contenu.donnees;
+    const estObjet = x => x && typeof x === "object" && !Array.isArray(x);
+    if (!contenu || contenu.appli !== "hybride" || !estObjet(d) || !estObjet(d.reglages) || !estObjet(d.suivi)) {
+      return messageDonnees("Ce fichier n'est pas une sauvegarde de l'appli.", true);
+    }
+    if (contenu.version > VERSION_SAUVEGARDE) {
+      return messageDonnees("Cette sauvegarde vient d'une version plus récente de l'appli. Recharge la page puis réessaie.", true);
+    }
+    const quand = new Date(contenu.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+    const nbSeances = Object.values(d.suivi).filter(x => x && x.fait).length;
+    const ok = confirm(`Restaurer la sauvegarde du ${quand} (${nbSeances} séances cochées) ?\n\nTes données actuelles sur cet appareil seront remplacées.`);
+    if (!ok) return;
+    try {
+      localStorage.setItem(CLE_REGLAGES, JSON.stringify(d.reglages));
+      localStorage.setItem(CLE_STOCKAGE, JSON.stringify(d.suivi));
+      localStorage.setItem(CLE_CARNET, JSON.stringify(estObjet(d.carnet) ? d.carnet : {}));
+      // Les badges déjà mérités reviennent sans animation
+      localStorage.setItem(CLE_BADGES, JSON.stringify(estObjet(d.badges) ? d.badges : {}));
+    } catch (err) {
+      return messageDonnees("Impossible d'enregistrer sur cet appareil (navigation privée ?).", true);
+    }
+    location.reload();
+  });
 
   /* ---------- Badges ---------- */
   // Enregistrés dans le navigateur sous "hybride-badges" :
