@@ -299,12 +299,26 @@
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation: none !important; transition: none !important; }
     }
+
+    /* ---------- En haut : compte à rebours + prédiction ---------- */
+    .hero { background: var(--accent); color: var(--sur-accent); border: none; }
+    .hero-haut { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+    .rebours { flex-shrink: 0; white-space: nowrap; }
+    .rebours strong { display: block; font-size: 2.6rem; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+    .rebours small, .prediction small { display: block; font-size: 0.82rem; opacity: 0.85; margin-top: 4px; }
+    .prediction { text-align: right; min-width: 0; flex: 1; }
+    .prediction .etiquette { margin: 0 0 2px; text-transform: none; font-weight: 600; }
+    .prediction strong { display: block; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+    .hero-details { margin-top: 12px; padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--sur-accent) 25%, transparent); font-size: 0.85rem; }
+    .hero-details summary { cursor: pointer; opacity: 0.9; min-height: 32px; display: flex; align-items: center; }
+    .hero-details p { margin: 6px 0 0; opacity: 0.9; }
   </style>
 </head>
 <body>
 <main>
   <h1>Ma semaine hybride</h1>
   <p class="sous-titre">Course à pied + muscu, organisées pour ne pas se gêner.</p>
+  <div id="hero" class="carte hero" hidden></div>
   <div id="compteur" class="carte compteur" hidden></div>
 
   <!-- ========== ÉCRAN D'ACCUEIL (questions une par une) ========== -->
@@ -984,6 +998,8 @@
       alertes.push("Tu as noté une douleur au moins 2 fois ces 14 derniers jours. Lève le pied, et si la douleur persiste, consulte un professionnel de santé.");
     }
     const chrono = meilleurChronoNote(equivalent10k);
+    const prediction = predireChrono(chronos, distanceObjectif);
+    const regularite = calculerRegularite(plan, debutPlan);
 
     // Message sur l'objectif (sans promesse)
     let message;
@@ -998,6 +1014,7 @@
       message = `Objectif nettement plus rapide que ton niveau estimé (${formatDuree(estimation)}). Il serait prudent de viser un chrono intermédiaire.`;
     }
 
+    afficherHero({ dateCourse, distanceObjectif, tempsObjectif, prediction, regularite });
     afficherResultats({ semaineActuelle, allures, estimation: sansChrono ? null : estimation, semainesRestantes, semaine, avertissements, message, distanceObjectif, plan, debutSemaine, alertes, chrono });
   }
 
@@ -1005,6 +1022,95 @@
     const d = new Date(debutPlan);
     d.setDate(d.getDate() + 7 * (numero - 1));
     return d;
+  }
+
+  /* ---------- En haut : compte à rebours + prédiction de chrono ---------- */
+
+  // Prédiction sur la course visée, à partir de :
+  //  - tes chronos de référence (réglages),
+  //  - les chronos notés dans tes séances ces 12 dernières semaines (ex : "10 km en 44:30").
+  // Chaque chrono est converti en temps équivalent sur ta course (formule de Riegel), puis on fait la moyenne.
+  // C'est ton niveau ACTUEL, pas une promesse pour le jour J.
+  function predireChrono(chronosReference, distanceObjectif) {
+    const sources = chronosReference.map(c => ({ ...c, origine: "référence" }));
+    const limite = new Date();
+    limite.setHours(0, 0, 0, 0);
+    limite.setDate(limite.getDate() - 84);
+    Object.entries(suivi).forEach(([cle, s]) => {
+      const c = chronoDansNote(s.note);
+      if (!c || !c.temps || c.distance < 3 || c.distance > 42.2) return;
+      const date = new Date(cle.slice(0, 10) + "T00:00:00");
+      date.setDate(date.getDate() + Number(cle.slice(11)));
+      if (date < limite) return;
+      // déjà dans les réglages (bouton "Mettre à jour") : on ne le compte pas deux fois
+      const doublon = sources.some(x => Math.abs(x.distance - c.distance) < 0.1 && Math.abs(x.temps - c.temps) < 1);
+      if (!doublon) sources.push({ ...c, origine: "séance" });
+    });
+    if (sources.length === 0) return null;
+    const temps = sources.map(c => predireTemps(c.temps, c.distance, distanceObjectif));
+    const moyenne = temps.reduce((a, b) => a + b, 0) / temps.length;
+    return { temps: moyenne, min: moyenne * 0.98, max: moyenne * 1.02, nbChronos: sources.length };
+  }
+
+  // Régularité : séances de course faites / prévues sur les 4 dernières semaines (jours déjà passés)
+  function calculerRegularite(plan, debutPlan) {
+    const aujourdhui = new Date();
+    aujourdhui.setHours(0, 0, 0, 0);
+    const depuis = new Date(aujourdhui);
+    depuis.setDate(depuis.getDate() - 28);
+    let prevues = 0, faites = 0;
+    plan.forEach(semaine => {
+      const lundi = lundiDeLaSemaine(debutPlan, semaine.numero);
+      semaine.jours.forEach((jour, i) => {
+        const date = new Date(lundi);
+        date.setDate(date.getDate() + i);
+        if (date < depuis || date >= aujourdhui || jour.type !== "course" || !jour.km) return;
+        prevues++;
+        if (suivi[cleSeance(lundi, i)]?.fait) faites++;
+      });
+    });
+    return { prevues, faites };
+  }
+
+  function afficherHero({ dateCourse, distanceObjectif, tempsObjectif, prediction, regularite }) {
+    const hero = document.getElementById("hero");
+    if (!dateCourse) { hero.hidden = true; return; }
+    const aujourdhui = new Date();
+    aujourdhui.setHours(0, 0, 0, 0);
+    const date = new Date(dateCourse + "T00:00:00");
+    const jours = Math.round((date - aujourdhui) / 86400000);
+    const rebours = jours > 0 ? `J-${jours}` : jours === 0 ? "Jour J" : "Terminé";
+
+    let blocPrediction = `<strong class="chiffre">—</strong><small>Note un chrono dans une séance (ex : « 5 km en 25:00 ») pour avoir une prédiction.</small>`;
+    if (prediction) {
+      const ecart = Math.round((prediction.temps - tempsObjectif) / 60);
+      const comparaison = ecart <= -1 ? `${-ecart} min plus rapide que ton objectif`
+        : ecart >= 1 ? `${ecart} min de plus que ton objectif`
+        : "pile sur ton objectif";
+      blocPrediction = `
+        <strong class="chiffre">≈ ${formatDuree(prediction.temps)}</strong>
+        <small>entre ${formatDuree(prediction.min)} et ${formatDuree(prediction.max)} · ${comparaison}</small>`;
+    }
+    const texteRegularite = regularite.prevues
+      ? `Régularité (4 sem.) : ${regularite.faites}/${regularite.prevues} courses`
+      : "Régularité : pas encore de séances passées";
+
+    hero.innerHTML = `
+      <div class="hero-haut">
+        <div class="rebours">
+          <strong class="chiffre">${rebours}</strong>
+          <small>${NOMS_COURSE[distanceObjectif]} · ${date.toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}</small>
+        </div>
+        <div class="prediction">
+          <small class="etiquette">Prédiction aujourd'hui</small>
+          ${blocPrediction}
+        </div>
+      </div>
+      <details class="hero-details">
+        <summary>${prediction ? `Basé sur ${prediction.nbChronos} chrono${prediction.nbChronos > 1 ? "s" : ""}` : "Aucun chrono"} · ${texteRegularite}</summary>
+        <p>La prédiction convertit tes chronos de référence et ceux notés dans tes séances (12 dernières semaines) en un temps équivalent sur ta course, puis fait la moyenne. Elle reflète ton niveau actuel : ce n'est pas une promesse pour le jour J. Chaque nouveau chrono noté la met à jour.</p>
+      </details>`;
+    hero.hidden = false;
   }
 
   /* ---------- Bilan : ce que tu as vraiment fait ---------- */
@@ -1407,6 +1513,7 @@
     etapeQ = modifier ? 1 : 0; // en modification, on saute le message de bienvenue
     document.getElementById("appli").hidden = true;
     document.getElementById("compteur").hidden = true;
+    document.getElementById("hero").hidden = true;
     document.getElementById("accueil").hidden = false;
     afficherEtape();
     window.scrollTo(0, 0);
